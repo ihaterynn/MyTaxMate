@@ -10,6 +10,7 @@ import 'upload_options_screen.dart';
 import 'tax_news_screen.dart';
 import 'placeholder_screen.dart';
 import 'chat_assistant_screen.dart';
+import 'reports_screen.dart'; // Import the ReportsScreen
 
 // Import the new widget components
 import '../widgets/finance_tracker/navigation_rail.dart';
@@ -36,24 +37,52 @@ class _ModularFinanceTrackerScreenState
   bool _isLoading = false;
   String? _error;
 
-  // Scroll controller and app bar opacity state
+  // Scroll controller and app bar opacity state for the Home content
   final ScrollController _scrollController = ScrollController();
   double _appBarOpacity = 1.0;
 
   @override
   void initState() {
     super.initState();
+    // Load expenses initially when the screen is created
     _loadExpenses();
 
-    // Add listener to scroll controller to update app bar opacity
-    _scrollController.addListener(_updateAppBarOpacity);
+    // Add listener to scroll controller ONLY if we are on the home screen initially
+    // This listener is specifically for the Home content's SliverAppBar opacity effect.
+    if (_selectedIndex == 0) {
+      _scrollController.addListener(_updateAppBarOpacity);
+    }
   }
 
   @override
   void dispose() {
+    // Clean up the scroll controller listener
     _scrollController.removeListener(_updateAppBarOpacity);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  // Callback function for navigation item selection
+  void _onNavigationItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+      // Re-attach or remove the scroll listener based on the selected index
+      if (_selectedIndex == 0) {
+        // Attach listener only when Home is selected
+        if (!_scrollController.hasListeners) {
+          _scrollController.addListener(_updateAppBarOpacity);
+          // Immediately update opacity based on current scroll position if needed
+          _updateAppBarOpacity();
+        }
+      } else {
+        // Remove listener when not on the Home screen
+        if (_scrollController.hasListeners) {
+          _scrollController.removeListener(_updateAppBarOpacity);
+          // Optionally reset opacity when leaving the Home screen
+          _appBarOpacity = 1.0;
+        }
+      }
+    });
   }
 
   void _updateAppBarOpacity() {
@@ -86,6 +115,20 @@ class _ModularFinanceTrackerScreenState
         setState(() {
           _expenses = expenses;
           _isLoading = false;
+          // Sort expenses by date (descending) after fetching
+          _expenses.sort((a, b) {
+            DateTime? dateA, dateB;
+            try {
+              if (a.date.isNotEmpty) dateA = DateTime.parse(a.date);
+              if (b.date.isNotEmpty) dateB = DateTime.parse(b.date);
+              if (dateA == null && dateB == null) return 0;
+              if (dateA == null) return 1;
+              if (dateB == null) return -1;
+              return dateB.compareTo(dateA);
+            } catch (e) {
+              return 0; // Keep original order if dates are invalid
+            }
+          });
         });
       }
     } catch (e) {
@@ -98,83 +141,13 @@ class _ModularFinanceTrackerScreenState
     }
   }
 
+  // This function seems redundant with _loadExpenses if it always limits to 10
+  // and is only used for expenses. Consider removing or refactoring.
   Future<void> fetchData({String? tableName, String? input}) async {
-    if (tableName == null || tableName.isEmpty) {
-      if (mounted) {
-        setState(() {
-          _error = 'Table name not provided for fetchData.';
-          _isLoading = false;
-        });
-      }
-      return;
-    }
-
-    if (mounted) {
-      setState(() {
-        _isLoading = true;
-        _error = null;
-      });
-    }
-
-    try {
-      final supabase = Supabase.instance.client;
-      final response = await supabase.from(tableName).select().limit(10);
-
-      if (tableName == 'expenses') {
-        final List<Expense> fetchedExpenses =
-            (response).map((data) => Expense.fromJson(data)).toList();
-        if (mounted) {
-          setState(() {
-            _expenses = fetchedExpenses;
-          });
-        }
-      }
-
-      // Sort expenses by date (descending) after fetching
-      _expenses.sort((a, b) {
-        DateTime? dateA, dateB;
-        try {
-          // Ensure date strings are not null or empty before parsing
-          if (a.date.isNotEmpty) {
-            dateA = DateTime.parse(a.date);
-          }
-          if (b.date.isNotEmpty) {
-            dateB = DateTime.parse(b.date);
-          }
-
-          // Handle cases where one or both dates are unparsable/null
-          if (dateA == null && dateB == null) {
-            return 0; // Both invalid, keep order
-          }
-          if (dateA == null) {
-            return 1; // A is invalid, sort A after B (ascending for invalid)
-          }
-          if (dateB == null) {
-            return -1; // B is invalid, sort B after A (ascending for invalid)
-          }
-
-          return dateB.compareTo(dateA); // Descending order for valid dates
-        } catch (e) {
-          // Fallback: attempt to sort invalid ones consistently to the end
-          if (dateA == null && dateB != null) return 1;
-          if (dateA != null && dateB == null) return -1;
-          return 0; // Both invalid or other error, keep original relative order
-        }
-      });
-
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = 'Failed to fetch data from $tableName: ${e.toString()}';
-          _isLoading = false;
-        });
-      }
-    }
+    // Placeholder - likely not needed if _loadExpenses is the primary way
+    // to get initial expense data.
+    print("fetchData called, but _loadExpenses is primary.");
+    await _loadExpenses(); // Just delegate to _loadExpenses for now
   }
 
   Future<void> _viewOrDownloadReceipt(
@@ -211,10 +184,210 @@ class _ModularFinanceTrackerScreenState
   Widget build(BuildContext context) {
     final bool isWideScreen = MediaQuery.of(context).size.width > 800;
 
+    // Define the main content widget based on the selected index
+    Widget mainContent;
+    switch (_selectedIndex) {
+      case 0: // Home
+        mainContent = CustomScrollView(
+          controller: _scrollController, // Use scroll controller for Home
+          slivers: [
+            if (isWideScreen)
+              SliverAppBar(
+                pinned: true,
+                floating: false,
+                automaticallyImplyLeading: false,
+                backgroundColor: Colors.white.withOpacity(_appBarOpacity),
+                elevation: _appBarOpacity < 0.8 ? 4 * (1 - _appBarOpacity) : 0,
+                shadowColor: Colors.black.withOpacity(0.1),
+                titleSpacing: 24,
+                title: Image.asset(
+                  'assets/images/mytaxmate-logo.png',
+                  height: 42,
+                ),
+                flexibleSpace: FlexibleSpaceBar(
+                  background: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.white.withOpacity(_appBarOpacity),
+                          Colors.white.withOpacity(0.0),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                actions: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16.0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: AppGradients.blueGradient,
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF003A6B).withOpacity(0.2),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.download, size: 18),
+                        label: const Text('Download Report'),
+                        onPressed: () {
+                          // TODO: Implement Download Report - Maybe open a dialog for options?
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          foregroundColor: Colors.white,
+                          shadowColor: Colors.transparent,
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            SliverPadding(
+              padding: const EdgeInsets.all(24.0),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  // Summary Cards
+                  SummaryCards(
+                    expenses: _expenses,
+                    isLoading: _isLoading,
+                    error: _error,
+                    onReload: _loadExpenses, // Pass reload function
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Recent Expenses Section
+                  SectionHeader(
+                    title: 'Recent Expenses',
+                    action: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_error != null)
+                          IconButton(
+                            icon: const Icon(Icons.refresh),
+                            onPressed: _loadExpenses,
+                            tooltip: 'Retry loading expenses',
+                          ),
+                        const SizedBox(width: 8),
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: AppGradients.blueGradient,
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF003A6B).withOpacity(0.2),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton.icon(
+                            icon: const Icon(
+                              Icons.upload_file_outlined,
+                              size: 18,
+                            ),
+                            label: const Text('Add Record'),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => const ExpenseEntryScreen(),
+                                ),
+                              ).then(
+                                (_) => _loadExpenses(),
+                              ); // Reload after adding
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              shadowColor: Colors.transparent,
+                              elevation: 0,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Expenses Table
+                  ExpensesTable(
+                    expenses: _expenses,
+                    isLoading: _isLoading,
+                    error: _error,
+                    onReload: _loadExpenses, // Pass reload function
+                    onViewReceipt:
+                        _viewOrDownloadReceipt, // Pass view/download function
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Categories and Smart Assistant
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      bool useColumnLayout = constraints.maxWidth < 800;
+                      return useColumnLayout
+                          ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              ExpenseCategories(
+                                expenses: _expenses,
+                                isLoading: _isLoading,
+                                error: _error,
+                              ),
+                              const SizedBox(height: 24),
+                              const SmartAssistant(),
+                            ],
+                          )
+                          : Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                flex: 2,
+                                child: ExpenseCategories(
+                                  expenses: _expenses,
+                                  isLoading: _isLoading,
+                                  error: _error,
+                                ),
+                              ),
+                              const SizedBox(width: 24),
+                              const Expanded(flex: 3, child: SmartAssistant()),
+                            ],
+                          );
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                ]),
+              ),
+            ),
+          ],
+        );
+        break;
+      case 1: // Reports
+        // Note: ReportsScreen manages its own scrolling and loading internally
+        mainContent = const ReportsScreen();
+        break;
+      case 2: // Tax News
+        // Note: TaxNewsScreen manages its own scrolling and loading internally
+        mainContent = const TaxNewsScreen();
+        break;
+      default:
+        // Fallback to Home or an error screen
+        mainContent = const Center(child: Text('Unknown navigation index'));
+    }
+
     return Scaffold(
       appBar:
           isWideScreen
-              ? null
+              ? null // No AppBar on wide screens, handled by SliverAppBar
               : AppBar(
                 title: Padding(
                   padding: const EdgeInsets.only(left: 8.0),
@@ -223,6 +396,7 @@ class _ModularFinanceTrackerScreenState
                     height: 36,
                   ),
                 ),
+                // Use the calculated opacity for the narrow screen AppBar as well
                 backgroundColor: Colors.white.withOpacity(_appBarOpacity),
                 elevation: _appBarOpacity < 0.8 ? 4 * (1 - _appBarOpacity) : 0,
                 shadowColor: Colors.black.withOpacity(0.1),
@@ -236,16 +410,16 @@ class _ModularFinanceTrackerScreenState
                   IconButton(
                     icon: Icon(
                       Icons.notifications_none_outlined,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.primary.withOpacity(_appBarOpacity),
+                      color: Theme.of(context).colorScheme.primary.withOpacity(
+                        1.0 - _appBarOpacity,
+                      ), // Adjust icon opacity
                     ),
                     onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const TaxNewsScreen(),
-                        ),
-                      );
+                      // Example: Navigate to Tax News screen via a route if it's a separate screen
+                      // If TaxNewsScreen is only shown via the bottom bar/rail, this button might not be needed here
+                      // or could show a different notification UI.
+                      // For consistency with the rail/bar, we'll navigate to the Tax News using the index
+                      _onNavigationItemTapped(2); // Select Tax News index
                     },
                     tooltip: 'Tax Relief News',
                   ),
@@ -257,211 +431,21 @@ class _ModularFinanceTrackerScreenState
           if (isWideScreen)
             FinanceTrackerNavigationRail(
               selectedIndex: _selectedIndex,
-              onDestinationSelected: (int index) {
-                setState(() {
-                  _selectedIndex = index;
-                });
+              onDestinationSelected:
+                  _onNavigationItemTapped, // Use the renamed callback
+              onLogout: () async {
+                // Sign out using Supabase
+                await Supabase.instance.client.auth.signOut();
+                if (mounted) {
+                  Navigator.of(
+                    context,
+                  ).pushNamedAndRemoveUntil('/login', (route) => false);
+                }
               },
             ),
           Expanded(
-            child:
-                _selectedIndex == 2
-                    ? const TaxNewsScreen()
-                    : CustomScrollView(
-                      controller: _scrollController,
-                      slivers: [
-                        if (isWideScreen)
-                          SliverAppBar(
-                            pinned: true,
-                            floating: false,
-                            automaticallyImplyLeading: false,
-                            backgroundColor: Colors.white.withOpacity(
-                              _appBarOpacity,
-                            ),
-                            elevation:
-                                _appBarOpacity < 0.8
-                                    ? 4 * (1 - _appBarOpacity)
-                                    : 0,
-                            shadowColor: Colors.black.withOpacity(0.1),
-                            titleSpacing: 24,
-                            title: Image.asset(
-                              'assets/images/mytaxmate-logo.png',
-                              height: 42,
-                            ),
-                            flexibleSpace: FlexibleSpaceBar(
-                              background: AnimatedContainer(
-                                duration: const Duration(milliseconds: 150),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      Colors.white.withOpacity(_appBarOpacity),
-                                      Colors.white.withOpacity(0.0),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            actions: [
-                              Padding(
-                                padding: const EdgeInsets.only(right: 16.0),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    gradient: AppGradients.blueGradient,
-                                    borderRadius: BorderRadius.circular(8),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(
-                                          0xFF003A6B,
-                                        ).withOpacity(0.2),
-                                        blurRadius: 4,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ElevatedButton.icon(
-                                    icon: const Icon(Icons.download, size: 18),
-                                    label: const Text('Download Report'),
-                                    onPressed: () {
-                                      // TODO: Implement Download Report
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
-                                      foregroundColor: Colors.white,
-                                      shadowColor: Colors.transparent,
-                                      elevation: 0,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        SliverPadding(
-                          padding: const EdgeInsets.all(24.0),
-                          sliver: SliverList(
-                            delegate: SliverChildListDelegate([
-                              // Summary Cards
-                              SummaryCards(
-                                expenses: _expenses,
-                                isLoading: _isLoading,
-                                error: _error,
-                                onReload: _loadExpenses,
-                              ),
-                              const SizedBox(height: 24),
-
-                              // Recent Expenses Section
-                              SectionHeader(
-                                title: 'Recent Expenses',
-                                action: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (_error != null)
-                                      IconButton(
-                                        icon: const Icon(Icons.refresh),
-                                        onPressed: _loadExpenses,
-                                        tooltip: 'Retry loading expenses',
-                                      ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        gradient: AppGradients.blueGradient,
-                                        borderRadius: BorderRadius.circular(8),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: const Color(
-                                              0xFF003A6B,
-                                            ).withOpacity(0.2),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: ElevatedButton.icon(
-                                        icon: const Icon(
-                                          Icons.upload_file_outlined,
-                                          size: 18,
-                                        ),
-                                        label: const Text('Add Record'),
-                                        onPressed: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder:
-                                                  (context) =>
-                                                      const ExpenseEntryScreen(),
-                                            ),
-                                          ).then((_) => _loadExpenses());
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.transparent,
-                                          foregroundColor: Colors.white,
-                                          shadowColor: Colors.transparent,
-                                          elevation: 0,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Expenses Table
-                              ExpensesTable(
-                                expenses: _expenses,
-                                isLoading: _isLoading,
-                                error: _error,
-                                onReload: _loadExpenses,
-                                onViewReceipt: _viewOrDownloadReceipt,
-                              ),
-                              const SizedBox(height: 24),
-
-                              // Categories and Smart Assistant
-                              LayoutBuilder(
-                                builder: (context, constraints) {
-                                  bool useColumnLayout =
-                                      constraints.maxWidth < 800;
-                                  return useColumnLayout
-                                      ? Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: [
-                                          ExpenseCategories(
-                                            expenses: _expenses,
-                                            isLoading: _isLoading,
-                                            error: _error,
-                                          ),
-                                          const SizedBox(height: 24),
-                                          const SmartAssistant(),
-                                        ],
-                                      )
-                                      : Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Expanded(
-                                            flex: 2,
-                                            child: ExpenseCategories(
-                                              expenses: _expenses,
-                                              isLoading: _isLoading,
-                                              error: _error,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 24),
-                                          const Expanded(
-                                            flex: 3,
-                                            child: SmartAssistant(),
-                                          ),
-                                        ],
-                                      );
-                                },
-                              ),
-                              const SizedBox(height: 24),
-                            ]),
-                          ),
-                        ),
-                      ],
-                    ),
+            // Display the selected main content widget
+            child: mainContent,
           ),
         ],
       ),
@@ -490,13 +474,18 @@ class _ModularFinanceTrackerScreenState
       ),
       bottomNavigationBar:
           isWideScreen
-              ? null
+              ? null // No BottomNavigationBar on wide screens
               : FinanceTrackerBottomNavigationBar(
                 selectedIndex: _selectedIndex,
-                onTap: (int index) {
-                  setState(() {
-                    _selectedIndex = index;
-                  });
+                onTap: _onNavigationItemTapped, // Use the renamed callback
+                onLogout: () async {
+                  // Sign out using Supabase
+                  await Supabase.instance.client.auth.signOut();
+                  if (mounted) {
+                    Navigator.of(
+                      context,
+                    ).pushNamedAndRemoveUntil('/login', (route) => false);
+                  }
                 },
               ),
     );

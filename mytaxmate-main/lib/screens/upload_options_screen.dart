@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:async'; // <-- Add this line
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -50,7 +49,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
       context: context,
       initialDate:
           _dateController.text.isNotEmpty
-              ? (DateFormat('yyyy-MM-dd').tryParse(_dateController.text) ??
+              ? (DateFormat('yyyy-MM-dd').parse(_dateController.text) ??
                   DateTime.now())
               : DateTime.now(),
       firstDate: DateTime(2000),

@@ -3,7 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'
     hide User; // Assuming you have your own User model
 
-import 'package:flutter_mytaxmate/screens/finance_tracker_screen.dart';
+import 'package:flutter_mytaxmate/screens/modular_finance_tracker_screen.dart';
 import 'package:flutter_mytaxmate/screens/auth_screen.dart'; // Import AuthScreen
 import 'package:flutter_mytaxmate/services/supabase_service.dart';
 // For now, we'll focus on the auth flow to FinanceTrackerView
@@ -171,7 +171,7 @@ class MyApp extends StatelessWidget {
         '/': (context) => const AuthWrapper(),
         '/home':
             (context) =>
-                const FinanceTrackerScreen(), // Your main screen after login
+                const ModularFinanceTrackerScreen(), // Your main screen after login
         // Add other routes from your example if needed, e.g.:
         // '/setup-profile': (context) => const SetupProfileScreen(),
         // '/profile': (context) => const ProfileScreen(),
@@ -205,7 +205,7 @@ class AuthWrapper extends StatelessWidget {
             //   Navigator.of(context).pushReplacementNamed('/home');
             // });
             // return const Scaffold(body: Center(child: CircularProgressIndicator())); // Show loading while redirecting
-            return const FinanceTrackerScreen(); // Directly return the home screen
+            return const ModularFinanceTrackerScreen(); // Directly return the home screen
           }
         }
         // User is not signed in or session is null, show AuthScreen
