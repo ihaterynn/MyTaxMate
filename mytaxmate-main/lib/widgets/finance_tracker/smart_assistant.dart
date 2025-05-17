@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:convert'; // For jsonEncode and jsonDecode
-import 'package:http/http.dart' as http; // For making HTTP requests
-import '../../main.dart'; // For AppGradients
-import '../../services/expense_service.dart'; // Import your ExpenseService
+import '../../main.dart';
 
 enum InsightType {
   recommendation,
@@ -168,6 +165,7 @@ class _SmartAssistantState extends State<SmartAssistant> {
   }
 
   @override
+
   Widget build(BuildContext context) {
     return Card(
       elevation: 2,
@@ -213,9 +211,9 @@ class _SmartAssistantState extends State<SmartAssistant> {
                   ),
                 ),
                 const SizedBox(width: 16),
-                const Text(
+                Text(
                   "Smart Assistant",
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF202124),
@@ -258,13 +256,26 @@ class _SmartAssistantState extends State<SmartAssistant> {
                 },
                 separatorBuilder: (context, index) => const SizedBox(height: 12),
               ),
+
             const SizedBox(height: 16),
+            _buildAlertCard(
+              icon: Icons.lightbulb_outlined,
+              title: "Tax Saving Recommendation",
+              message:
+                  "Another placeholder insight. This could be a reminder or a suggestion for optimizing your finances.",
+              backgroundColor: const Color(0xFF003A6B).withOpacity(0.05),
+              iconColor: const Color(0xFF3776A1),
+              borderColor: const Color(0xFF003A6B).withOpacity(0.2),
+            ),
+            const SizedBox(height: 24),
             Center(
               child: TextButton.icon(
-                onPressed: _isLoading ? null : _fetchInsights,
-                icon: const Icon(Icons.refresh, size: 18),
+                onPressed: () {
+                  // TODO: Implement "See All Insights"
+                },
+                icon: const Icon(Icons.arrow_forward, size: 18),
                 label: const Text(
-                  'Refresh Insights',
+                  'See All Insights',
                   style: TextStyle(fontWeight: FontWeight.w500),
                 ),
                 style: TextButton.styleFrom(
@@ -281,17 +292,6 @@ class _SmartAssistantState extends State<SmartAssistant> {
     );
   }
 
-  Widget _buildErrorCard(String errorMessage) {
-    return _buildAlertCard(
-      icon: Icons.error_outline,
-      title: "Error",
-      message: errorMessage,
-      backgroundColor: Colors.red.withOpacity(0.05),
-      iconColor: Colors.red.shade700,
-      borderColor: Colors.red.withOpacity(0.2),
-    );
-  }
-
   Widget _buildAlertCard({
     required IconData icon,
     required String title,
@@ -301,7 +301,6 @@ class _SmartAssistantState extends State<SmartAssistant> {
     required Color borderColor,
   }) {
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         color: backgroundColor,
@@ -324,7 +323,7 @@ class _SmartAssistantState extends State<SmartAssistant> {
               color: iconColor.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: iconColor, size: 20),
+            child: Icon(icon, color: iconColor, size: 18),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -336,17 +335,13 @@ class _SmartAssistantState extends State<SmartAssistant> {
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: iconColor, // Use the dynamic iconColor for title
-                    fontSize: 15,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  message,
-                  style: const TextStyle(
+
                     color: Color(0xFF424242), // Keeping message text color consistent for readability
+
                     height: 1.4,
                     fontSize: 14,
                   ),
+                  overflow: TextOverflow.visible,
                 ),
               ],
             ),

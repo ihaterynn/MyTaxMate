@@ -30,11 +30,16 @@ class SummaryCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Handle the case where incomes might be null
+    final List<Income> safeIncomes = incomes ?? [];
+
     return LayoutBuilder(
       builder: (context, constraints) {
         bool useColumnLayout = constraints.maxWidth < 700;
+        final summaryCards = _buildSummaryCardsList(useColumnLayout, context);
+
         return useColumnLayout
-            ? Column(children: _buildSummaryCardsList(useColumnLayout, context))
+            ? Column(children: summaryCards)
             : Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: _buildSummaryCardsList(
@@ -53,11 +58,12 @@ class SummaryCards extends StatelessWidget {
     double currentMonthExpenses = 0.0;
     double currentMonthIncome = 0.0;
     double currentMonthDeductibleExpenses = 0.0; 
+
     final now = DateTime.now();
     final currentMonth = now.month;
     final currentYear = now.year;
 
-    if (!isLoadingExpenses && errorExpenses == null) {
+    if (!isLoading && error == null) {
       for (var expense in expenses) {
         try {
           final expenseDate = DateTime.parse(expense.date); 
@@ -70,20 +76,18 @@ class SummaryCards extends StatelessWidget {
           }
         } catch (e) {
           print('Error parsing expense date: ${expense.date} or processing deductible: $e');
+
         }
       }
     }
 
-    if (!isLoadingIncomes && errorIncomes == null) {
+    double currentMonthIncomes = 0.0;
+    if (!isLoading && error == null) {
       for (var income in incomes) {
-        try {
-          final incomeDate = DateTime.parse(income.date);
-          if (incomeDate.month == currentMonth &&
-              incomeDate.year == currentYear) {
-            currentMonthIncome += income.amount;
-          }
-        } catch (e) {
-          print('Error parsing income date: ${income.date}');
+        if (income.date != null &&
+            DateTime.parse(income.date).month == currentMonth &&
+            DateTime.parse(income.date).year == currentYear) {
+          currentMonthIncomes += income.amount;
         }
       }
     }
@@ -101,6 +105,7 @@ class SummaryCards extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         )
+
       },
       {
         'title': 'Monthly Expenses',
@@ -242,8 +247,9 @@ class SummaryCards extends StatelessWidget {
                 const PlaceholderScreen(title: 'Monthly Expenses Summary'), // Navigate to PlaceholderScreen
             ),
           ).then((_) => onReloadExpenses()); // Still call onReloadExpenses if needed, or remove if not applicable
+
         },
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12), // Match Card's shape
         child: cardContent,
       );
     } else if (title == 'Income') {
@@ -255,6 +261,7 @@ class SummaryCards extends StatelessWidget {
               builder: (context) => const IncomeEntryScreen(),
             ),
           ).then((_) => onReloadIncomes());
+
         },
         borderRadius: BorderRadius.circular(12),
         child: cardContent,

@@ -3,18 +3,27 @@ import 'package:flutter/material.dart';
 class FinanceTrackerBottomNavigationBar extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onTap;
+  final VoidCallback onLogout;
 
   const FinanceTrackerBottomNavigationBar({
     Key? key,
     required this.selectedIndex,
     required this.onTap,
+    required this.onLogout,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
       currentIndex: selectedIndex,
-      onTap: onTap,
+      onTap: (index) {
+        // If logout is tapped (last item), call onLogout
+        if (index == 3) {
+          onLogout();
+        } else {
+          onTap(index);
+        }
+      },
       items: const <BottomNavigationBarItem>[
         BottomNavigationBarItem(
           icon: Icon(Icons.home_outlined),
@@ -30,6 +39,11 @@ class FinanceTrackerBottomNavigationBar extends StatelessWidget {
           icon: Icon(Icons.article_outlined),
           activeIcon: Icon(Icons.article),
           label: 'Tax News',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.logout),
+          activeIcon: Icon(Icons.logout),
+          label: 'Logout',
         ),
       ],
       type: BottomNavigationBarType.fixed,
