@@ -8,7 +8,7 @@ class ChatService {
   factory ChatService() => _instance;
   ChatService._internal();
 
-  static const String _backendUrl = 'http://10.0.2.2:8002/chat'; 
+  static const String _backendUrl = 'http://localhost:8002/chat';
 
   final List<ChatMessage> _chatHistory = [];
   final _chatStreamController = StreamController<List<ChatMessage>>.broadcast();
