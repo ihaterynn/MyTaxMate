@@ -1,32 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../main.dart';
-import '../../screens/placeholder_screen.dart';
-import '../../screens/upload_options_screen.dart';
+import '../../screens/placeholder_screen.dart'; 
+// import '../../screens/expense_entry_screen.dart'; // Removed as it doesn't exist
 import '../../screens/income_entry_screen.dart';
 import '../../models/expense.dart';
-import '../../models/income.dart'; // Add this import
+import '../../models/income.dart';
 
 class SummaryCards extends StatelessWidget {
   final List<Expense> expenses;
-  final List<Income> incomes; // Add incomes list
+  final List<Income> incomes;
   final bool isLoadingExpenses;
   final bool isLoadingIncomes;
   final String? errorExpenses;
   final String? errorIncomes;
   final Function() onReloadExpenses;
-  final Function() onReloadIncomes; // Add callback for reloading incomes
+  final Function() onReloadIncomes;
 
   const SummaryCards({
     Key? key,
     required this.expenses,
-    required this.incomes, // Add to constructor
+    required this.incomes,
     required this.isLoadingExpenses,
     required this.isLoadingIncomes,
     this.errorExpenses,
     this.errorIncomes,
     required this.onReloadExpenses,
-    required this.onReloadIncomes, // Add to constructor
+    required this.onReloadIncomes,
   }) : super(key: key);
 
   @override
@@ -37,13 +36,12 @@ class SummaryCards extends StatelessWidget {
         return useColumnLayout
             ? Column(children: _buildSummaryCardsList(useColumnLayout, context))
             : Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children:
-                  _buildSummaryCardsList(
-                    useColumnLayout,
-                    context,
-                  ).map((card) => Expanded(child: card)).toList(),
-            );
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: _buildSummaryCardsList(
+                  useColumnLayout,
+                  context,
+                ).map((card) => Expanded(child: card)).toList(),
+              );
       },
     );
   }
@@ -52,9 +50,9 @@ class SummaryCards extends StatelessWidget {
     bool useColumnLayout,
     BuildContext context,
   ) {
-    // Calculate total expenses for the current month
     double currentMonthExpenses = 0.0;
-    double currentMonthIncome = 0.0; // Variable for current month income
+    double currentMonthIncome = 0.0;
+    double currentMonthDeductibleExpenses = 0.0; 
     final now = DateTime.now();
     final currentMonth = now.month;
     final currentYear = now.year;
@@ -62,13 +60,16 @@ class SummaryCards extends StatelessWidget {
     if (!isLoadingExpenses && errorExpenses == null) {
       for (var expense in expenses) {
         try {
-          final expenseDate = DateTime.parse(expense.date);
+          final expenseDate = DateTime.parse(expense.date); 
           if (expenseDate.month == currentMonth &&
               expenseDate.year == currentYear) {
             currentMonthExpenses += expense.amount;
+            if (expense.isDeductible) { 
+              currentMonthDeductibleExpenses += expense.amount;
+            }
           }
         } catch (e) {
-          print('Error parsing expense date: ${expense.date}');
+          print('Error parsing expense date: ${expense.date} or processing deductible: $e');
         }
       }
     }
@@ -90,23 +91,23 @@ class SummaryCards extends StatelessWidget {
     final cardData = [
       {
         'title': 'Income',
-        'amount': 'RM ${currentMonthIncome.toStringAsFixed(2)}', // Display current month income
+        'amount': 'RM ${currentMonthIncome.toStringAsFixed(2)}',
         'icon': Icons.account_balance_wallet_outlined,
-        'color': const Color(0xFF34A853),
+        'color': const Color(0xFF34A853), 
         'progress': 0.0,
-        'subtitle': 'For ${DateFormat.MMMM().format(now)}', // Subtitle for current month
+        'subtitle': 'For ${DateFormat.MMMM().format(now)}',
         'gradient': LinearGradient(
           colors: [Colors.white, const Color(0xFF34A853).withOpacity(0.05)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          ) // Use AppGradients
+        )
       },
       {
         'title': 'Monthly Expenses',
         'amount': 'RM ${currentMonthExpenses.toStringAsFixed(2)}',
         'icon': Icons.receipt_long_outlined,
-        'color': const Color(0xFF3776A1), // Medium blue from our palette
-        'progress': 0.0, // Placeholder, can be budget utilization
+        'color': const Color(0xFF3776A1), 
+        'progress': 0.0, 
         'subtitle': 'For ${DateFormat.MMMM().format(now)}',
         'gradient': LinearGradient(
           colors: [Colors.white, const Color(0xFF89CFF1).withOpacity(0.2)],
@@ -116,11 +117,13 @@ class SummaryCards extends StatelessWidget {
       },
       {
         'title': 'Deductions',
-        'amount': 'RM 0.00', // Placeholder for now
+        'amount': 'RM ${currentMonthDeductibleExpenses.toStringAsFixed(2)}', 
         'icon': Icons.savings_outlined,
-        'color': const Color(0xFF5293B8), // Blue from our palette
+        'color': const Color(0xFF5293B8), 
         'progress': 0.0,
-        'subtitle': 'Estimated savings not set',
+        'subtitle': currentMonthDeductibleExpenses > 0 
+            ? 'Deductible for ${DateFormat.MMMM().format(now)}' 
+            : 'No deductions for ${DateFormat.MMMM().format(now)}', 
         'gradient': LinearGradient(
           colors: [Colors.white, const Color(0xFF003A6B).withOpacity(0.05)],
           begin: Alignment.topLeft,
@@ -200,10 +203,13 @@ class SummaryCards extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color:
-                      title == 'Monthly Expenses'
-                          ? const Color(0xFF3776A1)
-                          : const Color(0xFF202124),
+                  color: title == 'Monthly Expenses'
+                      ? const Color(0xFF3776A1)
+                      : title == 'Income'
+                          ? const Color(0xFF34A853)
+                          : title == 'Deductions'
+                              ? const Color(0xFF5293B8)
+                              : const Color(0xFF202124),
                 ),
               ),
               const SizedBox(height: 4),
@@ -226,14 +232,16 @@ class SummaryCards extends StatelessWidget {
       ),
     );
 
-    // Wrap cards with InkWell for touch interactions
     if (title == 'Monthly Expenses') {
       return InkWell(
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const ExpenseEntryScreen()),
-          ).then((_) => onReloadExpenses()); // Use onReloadExpenses
+            MaterialPageRoute(
+              builder: (context) => 
+                const PlaceholderScreen(title: 'Monthly Expenses Summary'), // Navigate to PlaceholderScreen
+            ),
+          ).then((_) => onReloadExpenses()); // Still call onReloadExpenses if needed, or remove if not applicable
         },
         borderRadius: BorderRadius.circular(12),
         child: cardContent,
@@ -244,10 +252,9 @@ class SummaryCards extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder:
-                  (context) => const IncomeEntryScreen(),
+              builder: (context) => const IncomeEntryScreen(),
             ),
-          ).then((_) => onReloadIncomes()); // Use onReloadIncomes and reload after navigation
+          ).then((_) => onReloadIncomes());
         },
         borderRadius: BorderRadius.circular(12),
         child: cardContent,
@@ -258,9 +265,8 @@ class SummaryCards extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder:
-                  (context) =>
-                      const PlaceholderScreen(title: 'Deductions Summary'),
+              builder: (context) =>
+                  const PlaceholderScreen(title: 'Deductions Summary'),
             ),
           );
         },
