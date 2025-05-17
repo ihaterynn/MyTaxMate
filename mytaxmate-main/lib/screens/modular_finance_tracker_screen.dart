@@ -5,11 +5,14 @@ import 'package:intl/intl.dart';
 
 import '../main.dart';
 import '../models/expense.dart';
+import '../models/income.dart'; // Add this import
 import '../services/expense_service.dart';
+import '../services/income_service.dart'; // Add this import
 import 'upload_options_screen.dart';
 import 'tax_news_screen.dart';
 import 'placeholder_screen.dart';
 import 'chat_assistant_screen.dart';
+import 'income_entry_screen.dart'; // Add this import
 
 // Import the new widget components
 import '../widgets/finance_tracker/navigation_rail.dart';
@@ -17,6 +20,7 @@ import '../widgets/finance_tracker/bottom_navigation_bar.dart';
 import '../widgets/finance_tracker/summary_cards.dart';
 import '../widgets/finance_tracker/section_header.dart';
 import '../widgets/finance_tracker/expenses_table.dart';
+import '../widgets/finance_tracker/income_table.dart'; // Add this import
 import '../widgets/finance_tracker/expense_categories.dart';
 import '../widgets/finance_tracker/smart_assistant.dart';
 
@@ -33,8 +37,14 @@ class _ModularFinanceTrackerScreenState
   int _selectedIndex = 0;
   final ExpenseService _expenseService = ExpenseService();
   List<Expense> _expenses = [];
-  bool _isLoading = false;
-  String? _error;
+  bool _isLoadingExpenses = false; // Renamed for clarity
+  String? _errorExpenses; // Renamed for clarity
+
+  // Add state for Incomes
+  final IncomeService _incomeService = IncomeService();
+  List<Income> _incomes = [];
+  bool _isLoadingIncomes = false;
+  String? _errorIncomes;
 
   // Scroll controller and app bar opacity state
   final ScrollController _scrollController = ScrollController();
@@ -44,6 +54,7 @@ class _ModularFinanceTrackerScreenState
   void initState() {
     super.initState();
     _loadExpenses();
+    _loadIncomes(); // Call to load incomes
 
     // Add listener to scroll controller to update app bar opacity
     _scrollController.addListener(_updateAppBarOpacity);
@@ -53,6 +64,7 @@ class _ModularFinanceTrackerScreenState
   void dispose() {
     _scrollController.removeListener(_updateAppBarOpacity);
     _scrollController.dispose();
+    // Dispose other controllers if any
     super.dispose();
   }
 
@@ -76,8 +88,8 @@ class _ModularFinanceTrackerScreenState
 
   Future<void> _loadExpenses() async {
     setState(() {
-      _isLoading = true;
-      _error = null;
+      _isLoadingExpenses = true;
+      _errorExpenses = null;
     });
 
     try {
@@ -85,14 +97,55 @@ class _ModularFinanceTrackerScreenState
       if (mounted) {
         setState(() {
           _expenses = expenses;
-          _isLoading = false;
+          _isLoadingExpenses = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = 'Failed to load expenses: ${e.toString()}';
-          _isLoading = false;
+          _errorExpenses = 'Failed to load expenses: ${e.toString()}';
+          _isLoadingExpenses = false;
+        });
+      }
+    }
+  }
+
+  // Method to load incomes
+  Future<void> _loadIncomes() async {
+    setState(() {
+      _isLoadingIncomes = true;
+      _errorIncomes = null;
+    });
+
+    try {
+      final incomes = await _incomeService.getRecentIncomes();
+      if (mounted) {
+        // Sort incomes by date (descending) after fetching
+        incomes.sort((a, b) {
+          DateTime? dateA, dateB;
+          try {
+            if (a.date.isNotEmpty) dateA = DateTime.parse(a.date);
+            if (b.date.isNotEmpty) dateB = DateTime.parse(b.date);
+            if (dateA == null && dateB == null) return 0;
+            if (dateA == null) return 1;
+            if (dateB == null) return -1;
+            return dateB.compareTo(dateA);
+          } catch (e) {
+            if (dateA == null && dateB != null) return 1;
+            if (dateA != null && dateB == null) return -1;
+            return 0;
+          }
+        });
+        setState(() {
+          _incomes = incomes;
+          _isLoadingIncomes = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorIncomes = 'Failed to load incomes: ${e.toString()}';
+          _isLoadingIncomes = false;
         });
       }
     }
@@ -102,8 +155,8 @@ class _ModularFinanceTrackerScreenState
     if (tableName == null || tableName.isEmpty) {
       if (mounted) {
         setState(() {
-          _error = 'Table name not provided for fetchData.';
-          _isLoading = false;
+          _errorExpenses = 'Table name not provided for fetchData.'; // Assuming this was for expenses
+          _isLoadingExpenses = false;
         });
       }
       return;
@@ -111,8 +164,11 @@ class _ModularFinanceTrackerScreenState
 
     if (mounted) {
       setState(() {
-        _isLoading = true;
-        _error = null;
+        // Decide which loader to set based on tableName or a new parameter
+        if (tableName == 'expenses') _isLoadingExpenses = true;
+        if (tableName == 'incomes') _isLoadingIncomes = true;
+        _errorExpenses = null;
+        _errorIncomes = null;
       });
     }
 
@@ -128,9 +184,33 @@ class _ModularFinanceTrackerScreenState
             _expenses = fetchedExpenses;
           });
         }
+      } else if (tableName == 'incomes') { // Handle fetching incomes if needed via this generic method
+        final List<Income> fetchedIncomes =
+            (response).map((data) => Income.fromJson(data)).toList();
+        if (mounted) {
+          // Sort incomes by date (descending) after fetching
+          fetchedIncomes.sort((a, b) {
+            DateTime? dateA, dateB;
+            try {
+              if (a.date.isNotEmpty) dateA = DateTime.parse(a.date);
+              if (b.date.isNotEmpty) dateB = DateTime.parse(b.date);
+              if (dateA == null && dateB == null) return 0;
+              if (dateA == null) return 1;
+              if (dateB == null) return -1;
+              return dateB.compareTo(dateA);
+            } catch (e) {
+              if (dateA == null && dateB != null) return 1;
+              if (dateA != null && dateB == null) return -1;
+              return 0;
+            }
+          });
+          setState(() {
+            _incomes = fetchedIncomes;
+          });
+        }
       }
 
-      // Sort expenses by date (descending) after fetching
+      // Sort expenses by date (descending) after fetching - This might be redundant if _loadExpenses does it
       _expenses.sort((a, b) {
         DateTime? dateA, dateB;
         try {
@@ -164,14 +244,21 @@ class _ModularFinanceTrackerScreenState
 
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          // Decide which loader to set based on tableName or a new parameter
+          if (tableName == 'expenses') _isLoadingExpenses = false;
+          if (tableName == 'incomes') _isLoadingIncomes = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = 'Failed to fetch data from $tableName: ${e.toString()}';
-          _isLoading = false;
+          if (tableName == 'expenses') {
+            _errorExpenses = 'Failed to fetch data from $tableName: ${e.toString()}';
+            _isLoadingExpenses = false;
+          } else if (tableName == 'incomes') {
+            _errorIncomes = 'Failed to fetch data from $tableName: ${e.toString()}';
+            _isLoadingIncomes = false;
+          }
         });
       }
     }
@@ -206,6 +293,38 @@ class _ModularFinanceTrackerScreenState
       }
     }
   }
+
+  // Method to view or download income documents
+  Future<void> _viewOrDownloadIncomeDocument(
+    String storagePath, {
+    bool download = false,
+  }) async {
+    const String bucketName = 'income-bucket'; // Ensure this is your income bucket
+    try {
+      final supabaseClient = Supabase.instance.client;
+      final String publicUrl = supabaseClient.storage
+          .from(bucketName)
+          .getPublicUrl(storagePath);
+
+      final Uri uri = Uri.parse(publicUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not open document. URL: $publicUrl')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error getting document URL: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -344,9 +463,13 @@ class _ModularFinanceTrackerScreenState
                               // Summary Cards
                               SummaryCards(
                                 expenses: _expenses,
-                                isLoading: _isLoading,
-                                error: _error,
-                                onReload: _loadExpenses,
+                                incomes: _incomes, // Pass incomes
+                                isLoadingExpenses: _isLoadingExpenses, // Pass expense loading state
+                                isLoadingIncomes: _isLoadingIncomes, // Pass income loading state
+                                errorExpenses: _errorExpenses, // Pass expense error state
+                                errorIncomes: _errorIncomes, // Pass income error state
+                                onReloadExpenses: _loadExpenses, // Pass expense reload
+                                onReloadIncomes: _loadIncomes, // Pass income reload
                               ),
                               const SizedBox(height: 24),
 
@@ -356,7 +479,7 @@ class _ModularFinanceTrackerScreenState
                                 action: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    if (_error != null)
+                                    if (_errorExpenses != null)
                                       IconButton(
                                         icon: const Icon(Icons.refresh),
                                         onPressed: _loadExpenses,
@@ -409,10 +532,74 @@ class _ModularFinanceTrackerScreenState
                               // Expenses Table
                               ExpensesTable(
                                 expenses: _expenses,
-                                isLoading: _isLoading,
-                                error: _error,
+                                isLoading: _isLoadingExpenses,
+                                error: _errorExpenses,
                                 onReload: _loadExpenses,
                                 onViewReceipt: _viewOrDownloadReceipt,
+                              ),
+                              const SizedBox(height: 24),
+
+                              // Recent Incomes Section
+                              SectionHeader(
+                                title: 'Recent Incomes',
+                                action: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (_errorIncomes != null)
+                                      IconButton(
+                                        icon: const Icon(Icons.refresh),
+                                        onPressed: _loadIncomes,
+                                        tooltip: 'Retry loading incomes',
+                                      ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        gradient: AppGradients.lightBlueGradient, // Use green gradient for income
+                                        borderRadius: BorderRadius.circular(8),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(0xFF34A853)
+                                                .withOpacity(0.2), // Green shadow
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: ElevatedButton.icon(
+                                        icon: const Icon(
+                                          Icons.add_card_outlined, // Icon for adding income
+                                          size: 18,
+                                        ),
+                                        label: const Text('Add Income'),
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  const IncomeEntryScreen(),
+                                            ),
+                                          ).then((_) => _loadIncomes()); // Reload incomes after adding
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.transparent,
+                                          foregroundColor: Colors.white,
+                                          shadowColor: Colors.transparent,
+                                          elevation: 0,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Income Table
+                              IncomeTable(
+                                incomes: _incomes,
+                                isLoading: _isLoadingIncomes,
+                                error: _errorIncomes,
+                                onReload: _loadIncomes,
+                                onViewDocument: _viewOrDownloadIncomeDocument, // Pass the new method
                               ),
                               const SizedBox(height: 24),
 
@@ -428,8 +615,8 @@ class _ModularFinanceTrackerScreenState
                                         children: [
                                           ExpenseCategories(
                                             expenses: _expenses,
-                                            isLoading: _isLoading,
-                                            error: _error,
+                                            isLoading: _isLoadingExpenses,
+                                            error: _errorExpenses,
                                           ),
                                           const SizedBox(height: 24),
                                           const SmartAssistant(),
@@ -443,8 +630,8 @@ class _ModularFinanceTrackerScreenState
                                             flex: 2,
                                             child: ExpenseCategories(
                                               expenses: _expenses,
-                                              isLoading: _isLoading,
-                                              error: _error,
+                                              isLoading: _isLoadingExpenses,
+                                              error: _errorExpenses,
                                             ),
                                           ),
                                           const SizedBox(width: 24),

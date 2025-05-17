@@ -31,6 +31,12 @@ class AppGradients {
     end: Alignment.bottomRight,
   );
 
+  static const LinearGradient greenGradient = LinearGradient(
+    colors: [Color(0xFF34A853), Color(0xFF81C784)], // Example green gradient colors
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
   static const LinearGradient fullBlueGradient = LinearGradient(
     colors: [
       Color(0xFF003A6B),
