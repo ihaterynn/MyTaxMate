@@ -183,6 +183,7 @@ class _ChatAssistantScreenState extends State<ChatAssistantScreen> {
 
   Widget _buildMessageBubble(ChatMessage message) {
     final isUser = message.isUser;
+    final maxWidth = MediaQuery.of(context).size.width * 0.7;
 
     return Padding(
       padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
@@ -191,12 +192,18 @@ class _ChatAssistantScreenState extends State<ChatAssistantScreen> {
             isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!isUser) _buildAssistantAvatar(),
+          if (!isUser)
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: _buildAssistantAvatar(),
+            ),
 
-          const SizedBox(width: 8.0),
+          if (!isUser) const SizedBox(width: 8.0),
 
+          // Use Flexible + Container with constraints for proper text wrapping
           Flexible(
             child: Container(
+              constraints: BoxConstraints(maxWidth: maxWidth),
               padding: const EdgeInsets.symmetric(
                 horizontal: 16.0,
                 vertical: 12.0,
@@ -224,13 +231,19 @@ class _ChatAssistantScreenState extends State<ChatAssistantScreen> {
                   fontSize: 15,
                   color: isUser ? Colors.white : const Color(0xFF202124),
                 ),
+                softWrap: true,
+                overflow: TextOverflow.visible,
               ),
             ),
           ),
 
-          const SizedBox(width: 8.0),
+          if (isUser) const SizedBox(width: 8.0),
 
-          if (isUser) _buildUserAvatar(),
+          if (isUser)
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: _buildUserAvatar(),
+            ),
         ],
       ),
     );
@@ -300,6 +313,7 @@ class _ChatAssistantScreenState extends State<ChatAssistantScreen> {
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: TextField(
@@ -325,6 +339,7 @@ class _ChatAssistantScreenState extends State<ChatAssistantScreen> {
               ),
               textInputAction: TextInputAction.send,
               onSubmitted: (_) => _sendMessage(),
+              maxLines: 1,
             ),
           ),
           const SizedBox(width: 10.0),
@@ -344,6 +359,7 @@ class _ChatAssistantScreenState extends State<ChatAssistantScreen> {
               icon: const Icon(Icons.send_rounded),
               color: Colors.white,
               onPressed: _sendMessage,
+              constraints: const BoxConstraints.tightFor(width: 40, height: 40),
             ),
           ),
         ],

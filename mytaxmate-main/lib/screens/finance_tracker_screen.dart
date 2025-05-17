@@ -1134,8 +1134,10 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
                         color: Color(0xFF202124),
                       ),
                       overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Text(
                     'RM ${expense.amount.toStringAsFixed(2)}',
                     style: const TextStyle(
@@ -1187,26 +1189,30 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
                         color: const Color(0xFF5F6368),
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        expense.category,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF5F6368),
-                          fontWeight: FontWeight.w500,
+                      Expanded(
+                        child: Text(
+                          expense.category,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF5F6368),
+                            fontWeight: FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ),
-                      const Spacer(),
                       if (expense.receiptStoragePath != null &&
                           expense.receiptStoragePath!.isNotEmpty)
-                        InkWell(
-                          onTap:
-                              () => _viewOrDownloadReceipt(
-                                expense.receiptStoragePath!,
-                              ),
-                          borderRadius: BorderRadius.circular(4),
-                          child: Padding(
-                            padding: const EdgeInsets.all(4.0),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: InkWell(
+                            onTap:
+                                () => _viewOrDownloadReceipt(
+                                  expense.receiptStoragePath!,
+                                ),
+                            borderRadius: BorderRadius.circular(4),
                             child: Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
                                   Icons.receipt_outlined,
@@ -1514,21 +1520,36 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
       childrenPadding: const EdgeInsets.only(left: 16, bottom: 8),
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontWeight: isHeader ? FontWeight.w600 : FontWeight.normal,
-              fontSize: isHeader ? 15 : 14,
-              color: isHeader ? Colors.black87 : Colors.grey[800],
+          // Use Flexible with Expanded for the title text to make it wrap or truncate properly
+          Expanded(
+            flex: 3,
+            child: Text(
+              title,
+              style: TextStyle(
+                fontWeight: isHeader ? FontWeight.w600 : FontWeight.normal,
+                fontSize: isHeader ? 15 : 14,
+                color: isHeader ? Colors.black87 : Colors.grey[800],
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
-          Text(
-            amount,
-            style: TextStyle(
-              fontWeight: isHeader ? FontWeight.w600 : FontWeight.normal,
-              fontSize: isHeader ? 15 : 14,
-              color: Colors.grey[700],
+          const SizedBox(width: 8), // Add some spacing
+          // Use a constrained container for the amount
+          Expanded(
+            flex: 2,
+            child: Text(
+              amount,
+              style: TextStyle(
+                fontWeight: isHeader ? FontWeight.w600 : FontWeight.normal,
+                fontSize: isHeader ? 15 : 14,
+                color: Colors.grey[700],
+              ),
+              textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
         ],
@@ -1688,6 +1709,8 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
                     color: iconColor,
                     fontSize: 15,
                   ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -1697,6 +1720,7 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
                     height: 1.4,
                     fontSize: 14,
                   ),
+                  overflow: TextOverflow.visible,
                 ),
               ],
             ),
