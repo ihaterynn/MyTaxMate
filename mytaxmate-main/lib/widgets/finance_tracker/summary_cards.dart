@@ -3,20 +3,30 @@ import 'package:intl/intl.dart';
 import '../../main.dart';
 import '../../screens/placeholder_screen.dart';
 import '../../screens/upload_options_screen.dart';
+import '../../screens/income_entry_screen.dart';
 import '../../models/expense.dart';
+import '../../models/income.dart'; // Add this import
 
 class SummaryCards extends StatelessWidget {
   final List<Expense> expenses;
-  final bool isLoading;
-  final String? error;
-  final Function() onReload;
+  final List<Income> incomes; // Add incomes list
+  final bool isLoadingExpenses;
+  final bool isLoadingIncomes;
+  final String? errorExpenses;
+  final String? errorIncomes;
+  final Function() onReloadExpenses;
+  final Function() onReloadIncomes; // Add callback for reloading incomes
 
   const SummaryCards({
     Key? key,
     required this.expenses,
-    required this.isLoading,
-    this.error,
-    required this.onReload,
+    required this.incomes, // Add to constructor
+    required this.isLoadingExpenses,
+    required this.isLoadingIncomes,
+    this.errorExpenses,
+    this.errorIncomes,
+    required this.onReloadExpenses,
+    required this.onReloadIncomes, // Add to constructor
   }) : super(key: key);
 
   @override
@@ -44,15 +54,35 @@ class SummaryCards extends StatelessWidget {
   ) {
     // Calculate total expenses for the current month
     double currentMonthExpenses = 0.0;
+    double currentMonthIncome = 0.0; // Variable for current month income
     final now = DateTime.now();
     final currentMonth = now.month;
     final currentYear = now.year;
 
-    if (!isLoading && error == null) {
+    if (!isLoadingExpenses && errorExpenses == null) {
       for (var expense in expenses) {
-        if (DateTime.parse(expense.date).month == currentMonth &&
-            DateTime.parse(expense.date).year == currentYear) {
-          currentMonthExpenses += expense.amount;
+        try {
+          final expenseDate = DateTime.parse(expense.date);
+          if (expenseDate.month == currentMonth &&
+              expenseDate.year == currentYear) {
+            currentMonthExpenses += expense.amount;
+          }
+        } catch (e) {
+          print('Error parsing expense date: ${expense.date}');
+        }
+      }
+    }
+
+    if (!isLoadingIncomes && errorIncomes == null) {
+      for (var income in incomes) {
+        try {
+          final incomeDate = DateTime.parse(income.date);
+          if (incomeDate.month == currentMonth &&
+              incomeDate.year == currentYear) {
+            currentMonthIncome += income.amount;
+          }
+        } catch (e) {
+          print('Error parsing income date: ${income.date}');
         }
       }
     }
@@ -60,16 +90,16 @@ class SummaryCards extends StatelessWidget {
     final cardData = [
       {
         'title': 'Income',
-        'amount': 'RM 0.00', // Placeholder for now
+        'amount': 'RM ${currentMonthIncome.toStringAsFixed(2)}', // Display current month income
         'icon': Icons.account_balance_wallet_outlined,
-        'color': const Color(0xFF34A853), // Using green from our palette
+        'color': const Color(0xFF34A853),
         'progress': 0.0,
-        'subtitle': 'Target not set',
+        'subtitle': 'For ${DateFormat.MMMM().format(now)}', // Subtitle for current month
         'gradient': LinearGradient(
           colors: [Colors.white, const Color(0xFF34A853).withOpacity(0.05)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-        ),
+          ) // Use AppGradients
       },
       {
         'title': 'Monthly Expenses',
@@ -203,9 +233,9 @@ class SummaryCards extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const ExpenseEntryScreen()),
-          ).then((_) => onReload()); // Reload expenses after returning
+          ).then((_) => onReloadExpenses()); // Use onReloadExpenses
         },
-        borderRadius: BorderRadius.circular(12), // Match Card's shape
+        borderRadius: BorderRadius.circular(12),
         child: cardContent,
       );
     } else if (title == 'Income') {
@@ -215,9 +245,9 @@ class SummaryCards extends StatelessWidget {
             context,
             MaterialPageRoute(
               builder:
-                  (context) => const PlaceholderScreen(title: 'Income Summary'),
+                  (context) => const IncomeEntryScreen(),
             ),
-          );
+          ).then((_) => onReloadIncomes()); // Use onReloadIncomes and reload after navigation
         },
         borderRadius: BorderRadius.circular(12),
         child: cardContent,
