@@ -165,15 +165,15 @@ class _IncomeEntryScreenState extends State<IncomeEntryScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add Income'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        elevation: 1, // Matched ExpenseEntryScreen
+        // Removed custom backgroundColor and foregroundColor to use theme defaults
       ),
-      body: SingleChildScrollView(
+      body: Padding( // Added Padding here
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: ListView( // Changed from SingleChildScrollView -> Column to ListView
+            // crossAxisAlignment: CrossAxisAlignment.stretch, // Not applicable to ListView directly
             children: <Widget>[
               // Date Field
               TextFormField(
@@ -256,67 +256,77 @@ class _IncomeEntryScreenState extends State<IncomeEntryScreen> {
               ),
               const SizedBox(height: 24),
 
-              // File Picker
-              Text(
-                'Attach Document (Optional)',
-                style: Theme.of(context).textTheme.titleMedium,
+              // New File Picker Section (replaces old file picker UI)
+              OutlinedButton.icon(
+                icon: const Icon(Icons.upload_file_outlined),
+                label: const Text('Upload Supporting Document (Optional)'),
+                onPressed: _pickDocumentFile,
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 48), // Make button full width
+                  alignment: Alignment.centerLeft, // Align icon and text to the left
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                ),
               ),
               const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Theme.of(context).dividerColor),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _selectedDocumentFileName ?? 'No file selected',
-                        overflow: TextOverflow.ellipsis,
+
+              if (_selectedDocumentFileName != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.5)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.attach_file, color: Theme.of(context).colorScheme.primary, size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _selectedDocumentFileName!,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                    if (_selectedDocumentFileName != null)
                       IconButton(
-                        icon: const Icon(Icons.clear, color: Colors.redAccent),
+                        icon: const Icon(Icons.clear, size: 20),
+                        color: Theme.of(context).colorScheme.error,
                         onPressed: _clearSelectedFile,
                         tooltip: 'Clear selection',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                       ),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.attach_file, size: 18),
-                      label: const Text('Select File'),
-                      onPressed: _pickDocumentFile,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.secondary,
-                        foregroundColor: Theme.of(context).colorScheme.onSecondary,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24), // Adjusted from 32 to 24 for consistency
 
               // Submit Button
-              _isSubmitting
-                  ? const Center(child: CircularProgressIndicator())
-                  : ElevatedButton.icon(
-                      icon: const Icon(Icons.save_alt_outlined),
-                      label: const Text('Add Income'),
-                      onPressed: _submitIncome,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                        textStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onPrimary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+              ElevatedButton(
+                onPressed: _isSubmitting ? null : _submitIncome,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  textStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onPrimary,
+                        fontWeight: FontWeight.bold,
                       ),
-                    ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  minimumSize: const Size(double.infinity, 50), // Make it full width
+                ),
+                child: _isSubmitting
+                    ? SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
+                        ),
+                      )
+                    : const Text('Add Income'), // Text only, icon removed to match ExpenseEntryScreen
+              ),
             ],
           ),
         ),
