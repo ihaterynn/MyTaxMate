@@ -99,30 +99,17 @@ class _AuthScreenState extends State<AuthScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  // Logo container with gradient background
-                  Container(
-                    height: 120,
-                    width: 120,
-                    margin: const EdgeInsets.only(bottom: 40),
-                    decoration: BoxDecoration(
-                      gradient: AppGradients.blueGradient,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF003A6B).withOpacity(0.2),
-                          blurRadius: 15,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      'TM',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  // Just the logo image
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 50.0),
+                    child: Image.asset(
+                      // Use the path relative to the project root, like ../assets/images/mytaxmate-logo.png
+                      '../assets/images/mytaxmate-logo.png',
+                      // Use BoxFit.contain to scale the image nicely within its available space
+                      //fit: BoxFit.contain,
+                      // You might want to add a specific height/width here if it's not constrained by a parent widget
+                      height: 30,
+                      width: 30,
                     ),
                   ),
 
@@ -192,7 +179,12 @@ class _AuthScreenState extends State<AuthScreen> {
                                 borderRadius: BorderRadius.circular(12),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color.fromARGB(255, 8, 108, 190).withOpacity(0.3),
+                                    color: const Color.fromARGB(
+                                      255,
+                                      8,
+                                      108,
+                                      190,
+                                    ).withOpacity(0.3),
                                     blurRadius: 8,
                                     offset: const Offset(0, 4),
                                   ),

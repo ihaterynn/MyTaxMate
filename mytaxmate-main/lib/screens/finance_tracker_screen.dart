@@ -25,10 +25,42 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
   bool _isLoading = false;
   String? _error;
 
+  // Scroll controller and app bar opacity state
+  final ScrollController _scrollController = ScrollController();
+  double _appBarOpacity = 1.0;
+
   @override
   void initState() {
     super.initState();
     _loadExpenses();
+
+    // Add listener to scroll controller to update app bar opacity
+    _scrollController.addListener(_updateAppBarOpacity);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_updateAppBarOpacity);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _updateAppBarOpacity() {
+    final scrollOffset = _scrollController.offset;
+    // Define the scroll range where opacity changes (0 to 150 pixels of scrolling)
+    const maxOffset = 150.0;
+
+    if (scrollOffset < maxOffset) {
+      // Calculate opacity based on scroll position (1.0 at top, 0.0 at maxOffset)
+      setState(() {
+        _appBarOpacity = 1.0 - (scrollOffset / maxOffset).clamp(0.0, 0.85);
+      });
+    } else if (_appBarOpacity != 0.15) {
+      // Set a minimum opacity value to keep a slight hint of the app bar
+      setState(() {
+        _appBarOpacity = 0.15;
+      });
+    }
   }
 
   Future<void> _loadExpenses() async {
@@ -189,19 +221,38 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
           isWideScreen
               ? null
               : AppBar(
-                title: const Text(
-                  'MyTaxMate',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                title: Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: Image.asset(
+                    'assets/images/mytaxmate-logo.png',
+                    height: 36,
+                  ),
                 ),
-                backgroundColor: Colors.white,
-                elevation: 0,
+                backgroundColor: Colors.white.withOpacity(_appBarOpacity),
+                elevation: _appBarOpacity < 0.8 ? 4 * (1 - _appBarOpacity) : 0,
+                shadowColor: Colors.black.withOpacity(0.1),
+                flexibleSpace: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(_appBarOpacity),
+                  ),
+                ),
                 actions: [
                   IconButton(
                     icon: Icon(
                       Icons.notifications_none_outlined,
-                      color: Theme.of(context).colorScheme.primary,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withOpacity(_appBarOpacity),
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const TaxNewsScreen(),
+                        ),
+                      );
+                    },
+                    tooltip: 'Tax Relief News',
                   ),
                   const SizedBox(width: 8),
                 ],
@@ -211,24 +262,42 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
           if (isWideScreen) _buildNavigationRail(),
           Expanded(
             child:
-                _selectedIndex == 3
+                _selectedIndex == 2
                     ? const TaxNewsScreen()
                     : CustomScrollView(
+                      controller: _scrollController,
                       slivers: [
                         if (isWideScreen)
                           SliverAppBar(
                             pinned: true,
                             floating: false,
                             automaticallyImplyLeading: false,
-                            backgroundColor: Colors.white,
-                            elevation: 0,
+                            backgroundColor: Colors.white.withOpacity(
+                              _appBarOpacity,
+                            ),
+                            elevation:
+                                _appBarOpacity < 0.8
+                                    ? 4 * (1 - _appBarOpacity)
+                                    : 0,
+                            shadowColor: Colors.black.withOpacity(0.1),
                             titleSpacing: 24,
-                            title: const Text(
-                              'MyTaxMate',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 24,
-                                color: Color(0xFF202124),
+                            title: Image.asset(
+                              'assets/images/mytaxmate-logo.png',
+                              height: 42,
+                            ),
+                            flexibleSpace: FlexibleSpaceBar(
+                              background: AnimatedContainer(
+                                duration: const Duration(milliseconds: 150),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.white.withOpacity(_appBarOpacity),
+                                      Colors.white.withOpacity(0.0),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
                             actions: [
@@ -431,6 +500,7 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
       },
       minWidth: 56.0,
       backgroundColor: Colors.white,
+      elevation: 1,
       selectedIconTheme: IconThemeData(
         color: Theme.of(context).colorScheme.primary,
       ),
@@ -442,21 +512,31 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
       unselectedLabelTextStyle: TextStyle(color: Colors.grey[600]),
       leading: Padding(
         padding: const EdgeInsets.symmetric(vertical: 20.0),
-        child: Container(
-          height: 48,
-          width: 48,
-          decoration: BoxDecoration(
-            gradient: AppGradients.blueGradient,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF003A6B).withOpacity(0.2),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
+        child: Column(
+          children: [
+            Image.asset(
+              'assets/images/mytaxmate-logo.png',
+              height: 48,
+              width: 48,
+            ),
+            const SizedBox(height: 8),
+            Container(
+              height: 48,
+              width: 48,
+              decoration: BoxDecoration(
+                gradient: AppGradients.blueGradient,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF003A6B).withOpacity(0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: const Icon(Icons.calculate, color: Colors.white, size: 24),
+              child: const Icon(Icons.calculate, color: Colors.white, size: 24),
+            ),
+          ],
         ),
       ),
       destinations: const <NavigationRailDestination>[
@@ -464,11 +544,6 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
           icon: Icon(Icons.home_outlined),
           selectedIcon: Icon(Icons.home),
           label: Text('Home'),
-        ),
-        NavigationRailDestination(
-          icon: Icon(Icons.inbox_outlined),
-          selectedIcon: Icon(Icons.inbox),
-          label: Text('Inbox'),
         ),
         NavigationRailDestination(
           icon: Icon(Icons.bar_chart_outlined),
@@ -529,11 +604,6 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
           icon: Icon(Icons.home_outlined),
           activeIcon: Icon(Icons.home),
           label: 'Home',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.inbox_outlined),
-          activeIcon: Icon(Icons.inbox),
-          label: 'Inbox',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.bar_chart_outlined),
@@ -1521,8 +1591,8 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Use Flexible with Expanded for the title text to make it wrap or truncate properly
-          Expanded(
+          // Wrap in Flexible to prevent overflow
+          Flexible(
             flex: 3,
             child: Text(
               title,
@@ -1536,8 +1606,8 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
             ),
           ),
           const SizedBox(width: 8), // Add some spacing
-          // Use a constrained container for the amount
-          Expanded(
+          // Wrap in Flexible with tight constraints for the amount
+          Flexible(
             flex: 2,
             child: Text(
               amount,
@@ -1638,8 +1708,8 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
               iconColor: const Color(0xFF3776A1),
               borderColor: const Color(0xFF003A6B).withOpacity(0.2),
             ),
-            const SizedBox(height: 24),
-            Center(
+            /* const SizedBox(height: 24), */
+            /* Center(
               child: TextButton.icon(
                 onPressed: () {
                   // TODO: Implement "See All Insights"
@@ -1656,7 +1726,7 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
                   ),
                 ),
               ),
-            ),
+            ), */
           ],
         ),
       ),

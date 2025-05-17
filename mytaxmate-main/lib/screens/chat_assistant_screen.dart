@@ -112,7 +112,7 @@ class _ChatAssistantScreenState extends State<ChatAssistantScreen> {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               gradient: AppGradients.lightBlueGradient,
               borderRadius: BorderRadius.circular(12),
@@ -124,10 +124,14 @@ class _ChatAssistantScreenState extends State<ChatAssistantScreen> {
                 ),
               ],
             ),
-            child: const Icon(
-              Icons.chat_bubble_outline,
-              color: Colors.white,
-              size: 20,
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.chat_bubble_outline,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 12),
