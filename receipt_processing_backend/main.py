@@ -9,6 +9,7 @@ import uvicorn
 import re
 import mimetypes
 import json 
+from datetime import datetime 
 
 load_dotenv()
 
@@ -38,7 +39,9 @@ def parse_llm_json_output(llm_json_text):
     """
     Parses the JSON output from the second LLM call.
     Handles potential markdown code block ```json ... ```
+    Ensures date is in YYYY-MM-DD format.
     """
+    raw_data = {}
     try:
         # Remove markdown code block fences if present
         if llm_json_text.strip().startswith("```json"):
@@ -46,14 +49,31 @@ def parse_llm_json_output(llm_json_text):
             if llm_json_text.strip().endswith("```"):
                 llm_json_text = llm_json_text.strip()[:-3] 
 
-        data = json.loads(llm_json_text)
-        # Validate and sanitize data
+        raw_data = json.loads(llm_json_text)
+        
+        # Date formatting
+        date_str = str(raw_data.get("date", ""))
+        formatted_date = ""
+        if date_str:
+            try:
+                # Attempt to parse MM/DD/YYYY
+                dt_obj = datetime.strptime(date_str, "%m/%d/%Y")
+                formatted_date = dt_obj.strftime("%Y-%m-%d")
+            except ValueError:
+                # If already YYYY-MM-DD or other format, try to use as is or leave blank
+                # A more robust solution might try other common formats here
+                if re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
+                    formatted_date = date_str
+                else:
+                    print(f"Warning: Date '{date_str}' from LLM is not in MM/DD/YYYY or YYYY-MM-DD format. Leaving as is or empty.")
+                    formatted_date = date_str # Or set to "" if strict YYYY-MM-DD is required and parsing fails
+
         return {
-            "date": str(data.get("date", "")),
-            "merchant": str(data.get("merchant", "")),
-            "amount": float(data.get("amount", 0.0)),
-            "category": str(data.get("category", "Other")),
-            "is_deductible": bool(data.get("is_deductible", False))
+            "date": formatted_date,
+            "merchant": str(raw_data.get("merchant", "")),
+            "amount": float(raw_data.get("amount", 0.0)),
+            "category": str(raw_data.get("category", "Other")),
+            "is_deductible": bool(raw_data.get("is_deductible", False))
         }
     except json.JSONDecodeError as e:
         print(f"Error decoding JSON from LLM: {e}")
@@ -64,7 +84,7 @@ def parse_llm_json_output(llm_json_text):
             "category": "Other", "is_deductible": False
         }
     except Exception as e:
-        print(f"Unexpected error parsing LLM JSON output: {e}")
+        print(f"Unexpected error parsing LLM JSON output: {e}. Raw data: {raw_data}")
         return {
             "date": "", "merchant": "", "amount": 0.0,
             "category": "Other", "is_deductible": False
@@ -127,10 +147,10 @@ async def process_receipt(file: UploadFile = File(...)):
         # --- Step 2: Extract structured data from the text using another LLM call ---
         print(f"Step 2: Sending request to Text LLM ('{MODEL_NAME_TEXT}') for structured data extraction...")
         
-        # Ensure the prompt clearly asks for JSON output.
+        # Ensure the prompt clearly asks for JSON output and YYYY-MM-DD date format.
         text_prompt = f"""
 Based on the following text extracted from a receipt, please extract the specified information and provide it strictly in JSON format.
-The JSON object should have these exact keys: "date" (string, format MM/DD/YYYY or YYYY-MM-DD), "merchant" (string), "amount" (float, the final total amount paid), "category" (string, e.g., "Food", "Office Supplies", "Travel"), and "is_deductible" (boolean, true if the expense seems tax-deductible for business purposes, otherwise false).
+The JSON object should have these exact keys: "date" (string, format YYYY-MM-DD ONLY), "merchant" (string), "amount" (float, the final total amount paid), "category" (string, e.g., "Food", "Office Supplies", "Travel"), and "is_deductible" (boolean, true if the expense seems tax-deductible for business purposes, otherwise false).
 
 Extracted text:
 ---
