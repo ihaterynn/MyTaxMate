@@ -46,6 +46,7 @@ dependencies:
   syncfusion_flutter_pdf: ^29.1.41  # Use the latest version
   path_provider: ^2.1.5 # Use the latest version
   open_file: ^3.3.0 # Use the latest version
+  http: ^1.2.0 # Or the latest version
 
 
 

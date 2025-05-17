@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../main.dart';
+import '../../screens/income_entry_screen.dart';
 import '../../screens/placeholder_screen.dart';
 import '../../screens/upload_options_screen.dart';
 import '../../models/expense.dart';
+import '../../models/income.dart';
 
 class SummaryCards extends StatelessWidget {
   final List<Expense> expenses;
+  final List<Income> incomes;
   final bool isLoading;
   final String? error;
-  final Function() onReload;
+  final VoidCallback onReload;
 
   const SummaryCards({
     Key? key,
     required this.expenses,
+    required this.incomes,
     required this.isLoading,
     this.error,
     required this.onReload,
@@ -21,18 +25,20 @@ class SummaryCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Handle the case where incomes might be null
+    final List<Income> safeIncomes = incomes ?? [];
+
     return LayoutBuilder(
       builder: (context, constraints) {
         bool useColumnLayout = constraints.maxWidth < 700;
+        final summaryCards = _buildSummaryCardsList(useColumnLayout, context);
+
         return useColumnLayout
-            ? Column(children: _buildSummaryCardsList(useColumnLayout, context))
+            ? Column(children: summaryCards)
             : Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children:
-                  _buildSummaryCardsList(
-                    useColumnLayout,
-                    context,
-                  ).map((card) => Expanded(child: card)).toList(),
+                  summaryCards.map((card) => Expanded(child: card)).toList(),
             );
       },
     );
@@ -57,14 +63,26 @@ class SummaryCards extends StatelessWidget {
       }
     }
 
+    double currentMonthIncomes = 0.0;
+    if (!isLoading && error == null) {
+      for (var income in incomes) {
+        if (income.date != null &&
+            DateTime.parse(income.date).month == currentMonth &&
+            DateTime.parse(income.date).year == currentYear) {
+          currentMonthIncomes += income.amount;
+        }
+      }
+    }
+
     final cardData = [
       {
         'title': 'Income',
-        'amount': 'RM 0.00', // Placeholder for now
+        'amount':
+            'RM ${currentMonthIncomes.toStringAsFixed(2)}', // Placeholder for now
         'icon': Icons.account_balance_wallet_outlined,
         'color': const Color(0xFF34A853), // Using green from our palette
         'progress': 0.0,
-        'subtitle': 'Target not set',
+        'subtitle': 'For ${DateFormat.MMMM().format(now)}',
         'gradient': LinearGradient(
           colors: [Colors.white, const Color(0xFF34A853).withOpacity(0.05)],
           begin: Alignment.topLeft,
@@ -213,11 +231,8 @@ class SummaryCards extends StatelessWidget {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder:
-                  (context) => const PlaceholderScreen(title: 'Income Summary'),
-            ),
-          );
+            MaterialPageRoute(builder: (context) => const IncomeEntryScreen()),
+          ).then((_) => onReload()); // Reload expenses after returning
         },
         borderRadius: BorderRadius.circular(12),
         child: cardContent,
