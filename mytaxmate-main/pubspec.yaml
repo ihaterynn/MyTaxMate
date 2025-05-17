@@ -40,6 +40,7 @@ dependencies:
   camera: ^0.10.5+9 # Or latest version
   camera_windows: ^0.2.6+2
   url_launcher: ^6.3.0
+  http: ^1.2.0 # Or the latest version
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
