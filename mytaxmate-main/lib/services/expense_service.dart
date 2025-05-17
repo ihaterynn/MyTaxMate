@@ -21,7 +21,7 @@ class ExpenseService {
 
       // Map the list of JSON objects to a list of Expense objects.
       // If the response is an empty list, this will correctly return an empty list of Expenses.
-      return (response).map((json) => Expense.fromJson(json as Map<String, dynamic>)).toList();
+      return (response).map((json) => Expense.fromJson(json)).toList();
         } catch (error) {
       // Log the error or handle it as per your application's error handling strategy.
       print('Error fetching recent expenses: $error');

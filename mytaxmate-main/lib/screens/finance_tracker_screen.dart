@@ -9,6 +9,7 @@ import '../services/expense_service.dart';
 import 'upload_options_screen.dart';
 import 'tax_news_screen.dart';
 import 'placeholder_screen.dart'; // Added import for PlaceholderScreen
+import 'chat_assistant_screen.dart'; // Add this import
 
 class FinanceTrackerScreen extends StatefulWidget {
   const FinanceTrackerScreen({super.key});
@@ -87,9 +88,7 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
       // //print('Fetched data from $tableName:');
       if (tableName == 'expenses') {
         final List<Expense> fetchedExpenses =
-            (response)
-                .map((data) => Expense.fromJson(data as Map<String, dynamic>))
-                .toList();
+            (response).map((data) => Expense.fromJson(data)).toList();
         if (mounted) {
           setState(() {
             _expenses = fetchedExpenses;
@@ -115,12 +114,15 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
           }
 
           // Handle cases where one or both dates are unparsable/null
-          if (dateA == null && dateB == null)
+          if (dateA == null && dateB == null) {
             return 0; // Both invalid, keep order
-          if (dateA == null)
+          }
+          if (dateA == null) {
             return 1; // A is invalid, sort A after B (ascending for invalid)
-          if (dateB == null)
+          }
+          if (dateB == null) {
             return -1; // B is invalid, sort B after A (ascending for invalid)
+          }
 
           return dateB.compareTo(dateA); // Descending order for valid dates
         } catch (e) {
@@ -404,7 +406,8 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
         ),
         child: FloatingActionButton(
           onPressed: () {
-            // TODO: Implement Chat Assistant
+            // Open Chat Assistant
+            ChatAssistantScreen.show(context);
           },
           backgroundColor: Colors.transparent,
           foregroundColor: Colors.white,
@@ -577,26 +580,41 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
       {
         'title': 'Income',
         'amount': 'RM 0.00', // Placeholder for now
-        'icon': Icons.monetization_on_outlined,
-        'color': Colors.green,
+        'icon': Icons.account_balance_wallet_outlined,
+        'color': const Color(0xFF34A853), // Using green from our palette
         'progress': 0.0,
         'subtitle': 'Target not set',
+        'gradient': LinearGradient(
+          colors: [Colors.white, const Color(0xFF34A853).withOpacity(0.05)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       },
       {
         'title': 'Monthly Expenses',
         'amount': 'RM ${currentMonthExpenses.toStringAsFixed(2)}',
-        'icon': Icons.credit_card_outlined,
-        'color': Colors.orange,
+        'icon': Icons.receipt_long_outlined,
+        'color': const Color(0xFF3776A1), // Medium blue from our palette
         'progress': 0.0, // Placeholder, can be budget utilization
         'subtitle': 'For ${DateFormat.MMMM().format(now)}',
+        'gradient': LinearGradient(
+          colors: [Colors.white, const Color(0xFF89CFF1).withOpacity(0.2)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       },
       {
         'title': 'Deductions',
         'amount': 'RM 0.00', // Placeholder for now
-        'icon': Icons.pie_chart_outline_outlined,
-        'color': Colors.blue,
+        'icon': Icons.savings_outlined,
+        'color': const Color(0xFF5293B8), // Blue from our palette
         'progress': 0.0,
         'subtitle': 'Estimated savings not set',
+        'gradient': LinearGradient(
+          colors: [Colors.white, const Color(0xFF003A6B).withOpacity(0.05)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       },
     ];
 
@@ -608,6 +626,7 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
         data['color'] as Color,
         data['progress'] as double,
         data['subtitle'] as String,
+        data['gradient'] as LinearGradient,
       );
       return useColumnLayout
           ? Padding(padding: const EdgeInsets.only(bottom: 16.0), child: card)
@@ -622,6 +641,7 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
     Color color,
     double progress,
     String subtitle,
+    LinearGradient gradient,
   ) {
     Widget cardContent = Card(
       elevation: 2,
@@ -630,17 +650,7 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          gradient:
-              title == 'Monthly Expenses'
-                  ? LinearGradient(
-                    colors: [
-                      Colors.white,
-                      const Color(0xFF89CFF1).withOpacity(0.3),
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  )
-                  : null,
+          gradient: gradient,
         ),
         child: Padding(
           padding: const EdgeInsets.all(20.0),
@@ -784,38 +794,170 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
   }
 
   Widget _buildExpensesTable() {
-    final bool isMobileView =
-        MediaQuery.of(context).size.width <
-        600; // Example breakpoint for mobile view
+    final bool isMobileView = MediaQuery.of(context).size.width < 600;
 
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(const Color(0xFF3776A1)),
+        ),
+      );
     }
 
     if (_error != null) {
       return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(_error!, style: TextStyle(color: Colors.red[700])),
-            const SizedBox(height: 8),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
-              onPressed: _loadExpenses,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          margin: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.error.withOpacity(0.2),
             ),
-          ],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 48,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Error Loading Expenses',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF202124),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.red[700]),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: AppGradients.blueGradient,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF003A6B).withOpacity(0.2),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                  onPressed: _loadExpenses,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    shadowColor: Colors.transparent,
+                    elevation: 0,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     if (_expenses.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text(
-            'No expenses found. Add a record to get started!',
-            textAlign: TextAlign.center,
+      return Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          margin: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF89CFF1).withOpacity(0.3)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF003A6B).withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(40),
+                ),
+                child: const Icon(
+                  Icons.receipt_long_outlined,
+                  size: 40,
+                  color: Color(0xFF3776A1),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'No Expenses Found',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF202124),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Add a record to get started tracking your expenses!',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xFF5F6368)),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: AppGradients.blueGradient,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF003A6B).withOpacity(0.2),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add First Expense'),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ExpenseEntryScreen(),
+                      ),
+                    ).then((_) => _loadExpenses());
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    shadowColor: Colors.transparent,
+                    elevation: 0,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -968,17 +1110,15 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
   // New method for mobile list item
   Widget _buildMobileExpenseListItem(Expense expense) {
     return Card(
-      margin: const EdgeInsets.symmetric(
-        horizontal: 0,
-        vertical: 6.0,
-      ), // Adjust horizontal if needed
-      elevation: 1.5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 6.0),
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.1),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: () => _showExpenseDetailsDialog(context, expense),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(12.0),
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -988,79 +1128,112 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
                   Expanded(
                     child: Text(
                       expense.merchant,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      style: const TextStyle(
+                        fontSize: 16,
                         fontWeight: FontWeight.w600,
+                        color: Color(0xFF202124),
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   Text(
                     'RM ${expense.amount.toStringAsFixed(2)}',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    style: const TextStyle(
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
+                      color: Color(0xFF3776A1),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    expense.date,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF89CFF1).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      expense.date,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: const Color(0xFF3776A1),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                   _buildStatusChip(
-                    // Re-use status chip for consistency
                     expense.isDeductible ? 'Deductible' : 'Non-Deductible',
-                    expense.isDeductible ? Colors.green : Colors.redAccent,
+                    expense.isDeductible
+                        ? const Color(0xFF34A853)
+                        : const Color(0xFFEA4335),
                   ),
                 ],
               ),
               if (expense.category.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(top: 6.0),
+                  padding: const EdgeInsets.only(top: 8.0),
                   child: Row(
                     children: [
                       Icon(
                         Icons.local_offer_outlined,
                         size: 14,
-                        color: Colors.grey[600],
+                        color: const Color(0xFF5F6368),
                       ),
                       const SizedBox(width: 4),
                       Text(
                         expense.category,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[700],
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF5F6368),
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
+                      const Spacer(),
+                      if (expense.receiptStoragePath != null &&
+                          expense.receiptStoragePath!.isNotEmpty)
+                        InkWell(
+                          onTap:
+                              () => _viewOrDownloadReceipt(
+                                expense.receiptStoragePath!,
+                              ),
+                          borderRadius: BorderRadius.circular(4),
+                          child: Padding(
+                            padding: const EdgeInsets.all(4.0),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.receipt_outlined,
+                                  size: 14,
+                                  color: const Color(0xFF3776A1),
+                                ),
+                                const SizedBox(width: 4),
+                                const Text(
+                                  'View Receipt',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF3776A1),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
             ],
           ),
-        ), // End of main Column
-      ), // End of Padding
-    ); // End of Card
-
-    // if (title == 'Monthly Expenses') {
-    //   return InkWell(
-    //     onTap: () {
-    //       Navigator.push(
-    //         context,
-    //         MaterialPageRoute(
-    //           builder: (context) => const UploadOptionsScreen(),
-    //         ),
-    //       ).then((_) => _loadExpenses()); // Reload expenses after returning
-    //     },
-    //     borderRadius: BorderRadius.circular(12), // Match Card's shape
-    //     child: cardContent,
-    //   );
-    // }
-    // return cardContent;
+        ),
+      ),
+    );
   }
 
   // New method for expense details dialog
@@ -1071,11 +1244,14 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
         return AlertDialog(
           title: Text(
             expense.merchant,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF202124),
+            ),
           ),
-          contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
           content: SingleChildScrollView(
             child: ListBody(
@@ -1089,12 +1265,15 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
                 _buildDetailRow(
                   'Tax Deductible:',
                   expense.isDeductible ? 'Yes' : 'No',
+                  valueColor:
+                      expense.isDeductible
+                          ? const Color(0xFF34A853)
+                          : const Color(0xFFEA4335),
                 ),
                 _buildDetailRow(
                   'Created At:',
                   DateFormat.yMMMd().add_jm().format(expense.createdAt),
-                ), // Requires intl package
-                // Add more fields as needed, e.g., ID, User ID if relevant for display
+                ),
               ],
             ),
           ),
@@ -1102,10 +1281,13 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
             if (expense.receiptStoragePath != null &&
                 expense.receiptStoragePath!.isNotEmpty) ...[
               TextButton.icon(
-                icon: const Icon(Icons.visibility_outlined, color: Colors.blue),
+                icon: const Icon(
+                  Icons.visibility_outlined,
+                  color: Color(0xFF3776A1),
+                ),
                 label: const Text(
                   'View Receipt',
-                  style: TextStyle(color: Colors.blue),
+                  style: TextStyle(color: Color(0xFF3776A1)),
                 ),
                 onPressed: () {
                   Navigator.of(dialogContext).pop(); // Close dialog first
@@ -1113,10 +1295,13 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
                 },
               ),
               TextButton.icon(
-                icon: const Icon(Icons.download_outlined, color: Colors.green),
+                icon: const Icon(
+                  Icons.download_outlined,
+                  color: Color(0xFF34A853),
+                ),
                 label: const Text(
                   'Download',
-                  style: TextStyle(color: Colors.green),
+                  style: TextStyle(color: Color(0xFF34A853)),
                 ),
                 onPressed: () {
                   Navigator.of(dialogContext).pop(); // Close dialog first
@@ -1139,9 +1324,9 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(String label, String value, {Color? valueColor}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -1149,12 +1334,21 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
             label,
             style: const TextStyle(
               fontWeight: FontWeight.w600,
-              color: Colors.black54,
+              color: Color(0xFF5F6368),
+              fontSize: 14,
             ),
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(value, style: const TextStyle(color: Colors.black87)),
+            child: Text(
+              value,
+              style: TextStyle(
+                color: valueColor ?? const Color(0xFF202124),
+                fontSize: 14,
+                fontWeight:
+                    valueColor != null ? FontWeight.w500 : FontWeight.normal,
+              ),
+            ),
           ),
         ],
       ),
@@ -1162,21 +1356,26 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
   }
 
   Widget _buildCategoryChip(String label) {
-    Color chipColor = Colors.blueGrey[50]!;
-    Color textColor = Colors.blueGrey[700]!;
+    Color chipColor;
+    Color textColor;
 
-    // Example: Customize colors based on category
-    if (label.toLowerCase() == 'workspace') {
-      chipColor = Colors.blue[50]!;
-      textColor = Colors.blue[800]!;
-    }
-    if (label.toLowerCase() == 'software') {
-      chipColor = Colors.orange[50]!;
-      textColor = Colors.orange[800]!;
-    }
-    if (label.toLowerCase() == 'meals') {
-      chipColor = Colors.purple[50]!;
-      textColor = Colors.purple[800]!;
+    // Assign colors based on category for visual consistency
+    switch (label.toLowerCase()) {
+      case 'workspace':
+        chipColor = const Color(0xFF6EB1D6).withOpacity(0.1);
+        textColor = const Color(0xFF1B5886);
+        break;
+      case 'software':
+        chipColor = const Color(0xFF89CFF1).withOpacity(0.1);
+        textColor = const Color(0xFF3776A1);
+        break;
+      case 'meals':
+        chipColor = const Color(0xFF003A6B).withOpacity(0.1);
+        textColor = const Color(0xFF003A6B);
+        break;
+      default:
+        chipColor = const Color(0xFF5293B8).withOpacity(0.1);
+        textColor = const Color(0xFF3776A1);
     }
 
     return Chip(
@@ -1189,7 +1388,9 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
         ),
       ),
       backgroundColor: chipColor,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      visualDensity: VisualDensity.compact,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
     );
   }
@@ -1199,7 +1400,7 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
       avatar: Icon(
         label == 'Deductible' ? Icons.check_circle : Icons.cancel,
         color: color,
-        size: 16,
+        size: 14,
       ),
       label: Text(
         label,
@@ -1210,7 +1411,9 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
         ),
       ),
       backgroundColor: color.withOpacity(0.1),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      visualDensity: VisualDensity.compact,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     );
   }
@@ -1289,22 +1492,6 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
         ), // End of main Column
       ), // End of Padding
     ); // End of Card
-
-    // if (title == 'Monthly Expenses') {
-    //   return InkWell(
-    //     onTap: () {
-    //       Navigator.push(
-    //         context,
-    //         MaterialPageRoute(
-    //           builder: (context) => const UploadOptionsScreen(),
-    //         ),
-    //       ).then((_) => _loadExpenses()); // Reload expenses after returning
-    //     },
-    //     borderRadius: BorderRadius.circular(12), // Match Card's shape
-    //     child: cardContent,
-    //   );
-    // }
-    // return cardContent;
   }
 
   Widget _buildCategoryItem(
@@ -1359,78 +1546,101 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
   Widget _buildSmartAssistant() {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: const Color(
-        0xFF6EB1D6,
-      ).withOpacity(0.1), // Light blue from our palette
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
+      shadowColor: Colors.black.withOpacity(0.1),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [
+              Colors.white,
+              const Color(0xFF6EB1D6).withOpacity(0.1),
+              const Color(0xFF89CFF1).withOpacity(0.05),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            stops: const [0.0, 0.6, 1.0],
+          ),
+        ),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              // New Row for title
               children: [
-                Icon(
-                  Icons.lightbulb_outline,
-                  color: const Color(
-                    0xFF3776A1,
-                  ), // Medium blue from our palette
-                  size: 26,
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: AppGradients.lightBlueGradient,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF3776A1).withOpacity(0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.lightbulb_outline,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 16),
                 Text(
                   "Smart Assistant",
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF202124),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             _buildAlertCard(
-              // Adapted from _buildInsightItem
-              icon: Icons.info_outline,
-              title: "Placeholder Insight 1",
+              icon: Icons.insights_rounded,
+              title: "Expense Insights",
               message:
                   "This is a placeholder message for an insight from the smart assistant. It might offer tips or observations.",
-              backgroundColor: const Color(
-                0xFF89CFF1,
-              ).withOpacity(0.1), // Pale blue from our palette
-              iconColor: const Color(0xFF1B5886), // Dark blue from our palette
+              backgroundColor: const Color(0xFF89CFF1).withOpacity(0.1),
+              iconColor: const Color(0xFF1B5886),
+              borderColor: const Color(0xFF89CFF1).withOpacity(0.3),
             ),
-            const Divider(height: 24, thickness: 0.5),
+            const SizedBox(height: 16),
             _buildAlertCard(
-              // Adapted from _buildInsightItem
-              icon: Icons.warning_amber_outlined,
-              title: "Placeholder Insight 2",
+              icon: Icons.lightbulb_outlined,
+              title: "Tax Saving Recommendation",
               message:
                   "Another placeholder insight. This could be a reminder or a suggestion for optimizing your finances.",
-              backgroundColor: const Color(0xFF003A6B).withOpacity(
-                0.05,
-              ), // Deep navy from our palette with low opacity
-              iconColor: const Color(0xFF5293B8), // Blue from our palette
+              backgroundColor: const Color(0xFF003A6B).withOpacity(0.05),
+              iconColor: const Color(0xFF3776A1),
+              borderColor: const Color(0xFF003A6B).withOpacity(0.2),
+            ),
+            const SizedBox(height: 24),
+            Center(
+              child: TextButton.icon(
+                onPressed: () {
+                  // TODO: Implement "See All Insights"
+                },
+                icon: const Icon(Icons.arrow_forward, size: 18),
+                label: const Text(
+                  'See All Insights',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                ),
+              ),
             ),
           ],
-        ), // End of main Column
-      ), // End of Padding
-    ); // End of Card
-
-    // if (title == 'Monthly Expenses') {
-    //   return InkWell(
-    //     onTap: () {
-    //       Navigator.push(
-    //         context,
-    //         MaterialPageRoute(
-    //           builder: (context) => const UploadOptionsScreen(),
-    //         ),
-    //       ).then((_) => _loadExpenses()); // Reload expenses after returning
-    //     },
-    //     borderRadius: BorderRadius.circular(12), // Match Card's shape
-    //     child: cardContent,
-    //   );
-    // }
-    // return cardContent;
+        ),
+      ),
+    );
   }
 
   Widget _buildAlertCard({
@@ -1439,18 +1649,33 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
     required String message,
     required Color backgroundColor,
     required Color iconColor,
+    required Color borderColor,
   }) {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: iconColor.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: iconColor, size: 24),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: iconColor, size: 18),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -1458,17 +1683,19 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
               children: [
                 Text(
                   title,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: iconColor,
+                    fontSize: 15,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   message,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.black87,
+                  style: const TextStyle(
+                    color: Color(0xFF5F6368),
                     height: 1.4,
+                    fontSize: 14,
                   ),
                 ),
               ],

@@ -48,26 +48,21 @@ class _TaxNewsScreenState extends State<TaxNewsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tax Relief News (Malaysia)'),
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF202124),
-        titleSpacing: 20,
+        title: const Text(
+          'Tax Relief News (Malaysia)',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF202124),
+          ),
+        ),
         actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 16.0),
-            decoration: BoxDecoration(
-              color: const Color(0xFF003A6B).withOpacity(0.05),
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.refresh_rounded),
-              tooltip: 'Refresh News',
-              onPressed: _fetchNews,
-              color: const Color(0xFF3776A1),
-            ),
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF3776A1)),
+            onPressed: _fetchNews,
+            tooltip: 'Refresh news',
           ),
         ],
+        elevation: 0,
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -85,35 +80,15 @@ class _TaxNewsScreenState extends State<TaxNewsScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        gradient: AppGradients.blueGradient,
-                        borderRadius: BorderRadius.circular(30),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF003A6B).withOpacity(0.2),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: const Padding(
-                        padding: EdgeInsets.all(14.0),
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 3,
-                        ),
+                    CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        const Color(0xFF3776A1),
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'Loading News...',
-                      style: TextStyle(
-                        color: const Color(0xFF3776A1),
-                        fontWeight: FontWeight.w500,
-                      ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Loading latest tax news...',
+                      style: TextStyle(color: Color(0xFF5F6368), fontSize: 14),
                     ),
                   ],
                 ),
@@ -133,13 +108,6 @@ class _TaxNewsScreenState extends State<TaxNewsScreen> {
                         decoration: BoxDecoration(
                           color: const Color(0xFFF1F4F9),
                           borderRadius: BorderRadius.circular(40),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
                         ),
                         child: Icon(
                           Icons.error_outline_rounded,
@@ -150,41 +118,22 @@ class _TaxNewsScreenState extends State<TaxNewsScreen> {
                       const SizedBox(height: 24),
                       Text(
                         'Error Loading News',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        style: const TextStyle(
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF202124),
+                          color: Color(0xFF202124),
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        margin: const EdgeInsets.symmetric(horizontal: 20),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.03),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                          border: Border.all(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.error.withOpacity(0.2),
-                          ),
-                        ),
-                        child: Text(
-                          'There was a problem loading the latest tax news.\n${snapshot.error}',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                            height: 1.5,
-                          ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'There was a problem loading the latest tax news.\n${snapshot.error}',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontSize: 15,
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 32),
                       Container(
                         decoration: BoxDecoration(
                           gradient: AppGradients.blueGradient,
@@ -209,6 +158,10 @@ class _TaxNewsScreenState extends State<TaxNewsScreen> {
                               horizontal: 32,
                               vertical: 14,
                             ),
+                            textStyle: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
                             elevation: 0,
                           ),
                         ),
@@ -230,65 +183,34 @@ class _TaxNewsScreenState extends State<TaxNewsScreen> {
                         width: 80,
                         height: 80,
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              const Color(0xFF89CFF1).withOpacity(0.7),
-                              const Color(0xFF3776A1).withOpacity(0.7),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
+                          color: const Color(0xFF003A6B).withOpacity(0.05),
                           borderRadius: BorderRadius.circular(40),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF003A6B).withOpacity(0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
                         ),
                         child: const Icon(
                           Icons.article_outlined,
                           size: 40,
-                          color: Colors.white,
+                          color: Color(0xFF3776A1),
                         ),
                       ),
                       const SizedBox(height: 24),
-                      Text(
+                      const Text(
                         'No News Available',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        style: TextStyle(
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF202124),
+                          color: Color(0xFF202124),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        margin: const EdgeInsets.symmetric(horizontal: 20),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.03),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                          border: Border.all(
-                            color: const Color(0xFF89CFF1).withOpacity(0.3),
-                          ),
-                        ),
-                        child: const Text(
-                          'No tax news available at the moment. Please check back later.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Color(0xFF5F6368),
-                            height: 1.5,
-                          ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'No tax news available at the moment.\nPlease check back later.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: Color(0xFF5F6368),
                         ),
                       ),
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 32),
                       Container(
                         decoration: BoxDecoration(
                           gradient: AppGradients.blueGradient,
@@ -314,7 +236,8 @@ class _TaxNewsScreenState extends State<TaxNewsScreen> {
                               vertical: 14,
                             ),
                             textStyle: const TextStyle(
-                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
                             ),
                             elevation: 0,
                           ),
@@ -341,141 +264,147 @@ class _TaxNewsScreenState extends State<TaxNewsScreen> {
                     elevation: 2,
                     shadowColor: Colors.black.withOpacity(0.1),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        gradient:
-                            index % 3 == 0
-                                ? LinearGradient(
+                    child: InkWell(
+                      onTap: () => _launchURL(item.url),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.white,
+                              const Color(0xFF89CFF1).withOpacity(0.12),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        padding: const EdgeInsets.all(20.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Date badge with gradient
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
                                   colors: [
-                                    Colors.white,
-                                    const Color(0xFF89CFF1).withOpacity(0.1),
+                                    const Color(0xFF003A6B).withOpacity(0.1),
+                                    const Color(0xFF5293B8).withOpacity(0.1),
                                   ],
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                )
-                                : null,
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () => _launchURL(item.url),
-                            borderRadius: BorderRadius.circular(12),
-                            splashColor: const Color(
-                              0xFF3776A1,
-                            ).withOpacity(0.1),
-                            highlightColor: const Color(
-                              0xFF3776A1,
-                            ).withOpacity(0.05),
-                            child: Padding(
-                              padding: const EdgeInsets.all(20.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                ),
+                                borderRadius: BorderRadius.circular(30),
+                                border: Border.all(
+                                  color: const Color(
+                                    0xFF003A6B,
+                                  ).withOpacity(0.1),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  // Date badge
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 5,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(
-                                        0xFF003A6B,
-                                      ).withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(30),
-                                    ),
-                                    child: Text(
-                                      item.publishedDate != null
-                                          ? DateFormat.yMMMd().format(
-                                            item.publishedDate!,
-                                          )
-                                          : DateFormat.yMMMd().format(
-                                            item.fetchedAt,
-                                          ),
-                                      style: const TextStyle(
-                                        color: Color(0xFF003A6B),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
+                                  const Icon(
+                                    Icons.calendar_today_rounded,
+                                    size: 14,
+                                    color: Color(0xFF003A6B),
                                   ),
-                                  const SizedBox(height: 16),
+                                  const SizedBox(width: 6),
                                   Text(
-                                    item.title,
+                                    item.publishedDate != null
+                                        ? DateFormat.yMMMd().format(
+                                          item.publishedDate!,
+                                        )
+                                        : DateFormat.yMMMd().format(
+                                          item.fetchedAt,
+                                        ),
                                     style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF202124),
-                                      height: 1.3,
+                                      color: Color(0xFF003A6B),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
                                     ),
-                                  ),
-                                  if (item.summary != null &&
-                                      item.summary!.isNotEmpty) ...[
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      item.summary!,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Color(0xFF5F6368),
-                                        height: 1.5,
-                                      ),
-                                      maxLines: 4,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                  const SizedBox(height: 16),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    children: [
-                                      Container(
-                                        decoration: BoxDecoration(
-                                          gradient: AppGradients.blueGradient,
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: const Color(
-                                                0xFF003A6B,
-                                              ).withOpacity(0.15),
-                                              blurRadius: 4,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                        child: ElevatedButton.icon(
-                                          icon: const Icon(
-                                            Icons.open_in_new,
-                                            size: 16,
-                                          ),
-                                          label: const Text('Read More'),
-                                          onPressed: () => _launchURL(item.url),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.transparent,
-                                            foregroundColor: Colors.white,
-                                            shadowColor: Colors.transparent,
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 16,
-                                              vertical: 8,
-                                            ),
-                                            textStyle: const TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                            elevation: 0,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
                                   ),
                                 ],
                               ),
                             ),
-                          ),
+                            const SizedBox(height: 16),
+                            Text(
+                              item.title,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF202124),
+                                height: 1.3,
+                              ),
+                            ),
+                            if (item.summary != null &&
+                                item.summary!.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              Text(
+                                item.summary!,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  color: Color(0xFF5F6368),
+                                  height: 1.5,
+                                ),
+                                maxLines: 4,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                            const SizedBox(height: 20),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                // Empty Spacer to maintain alignment
+                                const SizedBox(width: 4),
+                                // Read more button
+                                Container(
+                                  decoration: BoxDecoration(
+                                    gradient: AppGradients.blueGradient,
+                                    borderRadius: BorderRadius.circular(8),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(
+                                          0xFF003A6B,
+                                        ).withOpacity(0.2),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ElevatedButton.icon(
+                                    icon: const Icon(
+                                      Icons.open_in_new,
+                                      size: 16,
+                                    ),
+                                    label: const Text('Read More'),
+                                    onPressed: () => _launchURL(item.url),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.transparent,
+                                      foregroundColor: Colors.white,
+                                      shadowColor: Colors.transparent,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 8,
+                                      ),
+                                      textStyle: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      elevation: 0,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                     ),

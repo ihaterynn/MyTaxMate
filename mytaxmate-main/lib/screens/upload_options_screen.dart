@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -421,31 +420,41 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: const Color(0xFF89CFF1).withOpacity(0.3),
-                              width: 1,
+                              width: 1.5,
                               style: BorderStyle.solid,
                             ),
                           ),
                           child: Column(
                             children: [
-                              Icon(
-                                Icons.upload_file,
-                                size: 40,
-                                color: const Color(0xFF3776A1),
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                'Click to upload receipt',
-                                style: TextStyle(
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xFF3776A1,
+                                  ).withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.cloud_upload_outlined,
+                                  size: 40,
                                   color: const Color(0xFF3776A1),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              const Text(
+                                'Drag & drop or click to upload',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Color(0xFF3776A1),
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 8),
                               Text(
                                 'Supported formats: PDF, JPG, PNG',
                                 style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade600,
+                                  fontSize: 13,
+                                  color: const Color(0xFF5F6368),
                                 ),
                               ),
                             ],
