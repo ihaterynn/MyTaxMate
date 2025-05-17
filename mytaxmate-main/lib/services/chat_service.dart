@@ -7,15 +7,8 @@ class ChatService {
   factory ChatService() => _instance;
   ChatService._internal();
 
-  // List of predefined responses for demo purposes
-  final List<String> _predefinedResponses = [
-    "Based on your recent expenses, you could potentially claim RM 1,200 in tax deductions for your workspace expenses.",
-    "I noticed you've spent RM 350 on software this month. Did you know that business software expenses are tax-deductible?",
-    "Your records show consistent meal expenses. For business meals, you can claim 50% of these expenses as tax deductions.",
-    "Looking at your spending patterns, you might benefit from setting up a Lifestyle Tax Relief claim. Would you like more information about this?",
-    "Your tax filing deadline is approaching in 45 days. Would you like me to help you prepare your documentation?",
-    "Based on your income and expenses, you might qualify for the M40 tax incentives. I can provide more details if you're interested.",
-  ];
+  static const String _backendUrl = 'http://localhost:8000/chat';
+
 
   final List<ChatMessage> _chatHistory = [];
   final _chatStreamController = StreamController<List<ChatMessage>>.broadcast();
