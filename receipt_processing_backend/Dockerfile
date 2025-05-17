@@ -18,7 +18,7 @@ COPY . .
 EXPOSE 8001
 
 # Define environment variable for the API key (will be set at runtime)
-ENV DASHSCOPE_API_KEY="sk-556e60ee27924dc4948ce4eceecd575b" 
+ENV DASHSCOPE_API_KEY="your_api_key_here" 
 # It's better to pass this at runtime via -e or docker-compose
 
 # Run main.py when the container launches

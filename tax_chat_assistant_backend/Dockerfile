@@ -17,7 +17,7 @@ COPY . .
 EXPOSE 8000
 
 # Define environment variable for the API key (will be set at runtime)
-ENV DASHSCOPE_API_KEY="'sk-81b1061db3e74c43875ceaa385693af6'"
+ENV DASHSCOPE_API_KEY="your_api_key_here"
 # It's better to pass this at runtime via -e or docker-compose
 
 # Run chatbot_server.py when the container launches
