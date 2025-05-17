@@ -4,16 +4,77 @@ import 'package:http/http.dart' as http; // For making HTTP requests
 import '../../main.dart'; // For AppGradients
 import '../../services/expense_service.dart'; // Import your ExpenseService
 
+enum InsightType {
+  recommendation,
+  warning,
+  info,
+}
+
 class AiInsight {
-  final String title; // Title can be generic like "Smart Tip" or derived
+  final String title;
   final String message;
   final IconData icon;
+  final InsightType insightType;
+  final Color backgroundColor;
+  final Color iconColor;
+  final Color borderColor;
 
   AiInsight({
     required this.title,
     required this.message,
-    this.icon = Icons.lightbulb_outline,
-  });
+    this.insightType = InsightType.info,
+  })  : icon = _getIconForType(insightType),
+        backgroundColor = _getBackgroundColorForType(insightType),
+        iconColor = _getIconColorForType(insightType),
+        borderColor = _getBorderColorForType(insightType);
+
+  static IconData _getIconForType(InsightType type) {
+    switch (type) {
+      case InsightType.recommendation:
+        return Icons.check_circle_outline;
+      case InsightType.warning:
+        return Icons.warning_amber_rounded;
+      case InsightType.info:
+      default:
+        return Icons.lightbulb_outline;
+    }
+  }
+
+  static Color _getBackgroundColorForType(InsightType type) {
+    switch (type) {
+      case InsightType.recommendation:
+        return Colors.green.withOpacity(0.07);
+      case InsightType.warning:
+        return Colors.orange.withOpacity(0.07);
+      case InsightType.info:
+      default:
+        return const Color(0xFFE3F2FD); // Light blue
+    }
+  }
+
+  static Color _getIconColorForType(InsightType type) {
+    switch (type) {
+      case InsightType.recommendation:
+        return Colors.green.shade700;
+      case InsightType.warning:
+        return Colors.orange.shade700;
+      case InsightType.info:
+      default:
+        return const Color(0xFF1B5886); // Dark blue
+    }
+  }
+
+  static Color _getBorderColorForType(InsightType type) {
+    switch (type) {
+      case InsightType.recommendation:
+        return Colors.green.withOpacity(0.3);
+      case InsightType.warning:
+        return Colors.orange.withOpacity(0.3);
+      case InsightType.info:
+      default:
+        return const Color(0xFFBBDEFB); // Lighter blue
+    }
+  }
 }
 
 class SmartAssistant extends StatefulWidget {
@@ -29,13 +90,23 @@ class _SmartAssistantState extends State<SmartAssistant> {
   bool _isLoading = false;
   String? _errorMessage;
 
-  final String _chatApiUrl = 'http://localhost:8000/chat'; // For Android Emulator
-  // final String _chatApiUrl = 'http://YOUR_MACHINE_LOCAL_IP:8000/chat'; // For physical device/iOS Sim
+  final String _chatApiUrl = 'http://localhost:8000/chat';
 
   @override
   void initState() {
     super.initState();
     _fetchInsights();
+  }
+
+  InsightType _determineInsightType(String message) {
+    final lowerMessage = message.toLowerCase();
+    if (lowerMessage.contains('warning') || lowerMessage.contains('due soon') || lowerMessage.contains('important') || lowerMessage.contains('alert')) {
+      return InsightType.warning;
+    }
+    if (lowerMessage.contains('recommend') || lowerMessage.contains('consider') || lowerMessage.contains('tip:') || lowerMessage.contains('suggestion')) {
+      return InsightType.recommendation;
+    }
+    return InsightType.info;
   }
 
   Future<void> _fetchInsights() async {
@@ -49,42 +120,38 @@ class _SmartAssistantState extends State<SmartAssistant> {
       List<Map<String, dynamic>> expenses = await _expenseService.getRecentExpensesAsJsonEncodable();
 
       final requestBody = {
-        // The query now explicitly asks for a JSON list of concise points.
-        // The backend system prompt for smart assistant queries will reinforce this.
         'query': 'Based on my recent expenses, provide a JSON list of 2-3 concise financial insights, spending patterns, and potential tax saving tips relevant to Malaysian context. Each item in the list should be a single, actionable sentence. Example: ["Your spending on X is high.", "Consider Y for tax relief."]',
         'expenses': expenses,
-        'is_smart_assistant_query': true, // Indicate this is for the smart assistant
+        'is_smart_assistant_query': true,
       };
 
       final response = await http.post(
         Uri.parse(_chatApiUrl),
         headers: {'Content-Type': 'application/json; charset=UTF-8'},
         body: jsonEncode(requestBody),
-      ).timeout(const Duration(seconds: 45)); // Increased timeout slightly
+      ).timeout(const Duration(seconds: 45));
 
       if (response.statusCode == 200) {
-        // The backend should now return a JSON body where 'assistant_reply' is a list of strings
-        final responseData = jsonDecode(utf8.decode(response.bodyBytes)); 
-        final dynamic assistantReply = responseData['assistant_reply'];
+        final List<dynamic> decodedData = jsonDecode(utf8.decode(response.bodyBytes));
 
-        if (assistantReply is List) {
-          _insights = assistantReply.map<AiInsight>((item) {
+        if (decodedData is List) {
+          _insights = decodedData.map<AiInsight>((item) {
             if (item is String) {
-              // Simple title, or you can try to derive one if the AI provides more structure
-              return AiInsight(title: "Smart Tip", message: item);
+              final insightType = _determineInsightType(item);
+              String title = "Smart Tip";
+              if (insightType == InsightType.recommendation) title = "Recommendation";
+              if (insightType == InsightType.warning) title = "Important Alert";
+
+              return AiInsight(title: title, message: item, insightType: insightType);
             } else {
-              // Fallback for unexpected item type in the list
-              return AiInsight(title: "Insight", message: "Received unexpected insight format.");
+              return AiInsight(title: "Insight", message: "Received unexpected insight format.", insightType: InsightType.info);
             }
           }).toList();
           if (_insights.isEmpty) {
-             _insights.add(AiInsight(title: "Smart Insight", message: "No specific insights generated this time."));
+            _insights.add(AiInsight(title: "Smart Insight", message: "No specific insights generated this time. Check back later!", insightType: InsightType.info));
           }
-        } else if (assistantReply is String) {
-          // Fallback if the backend didn't return a list (e.g., error or old format)
-          _insights.add(AiInsight(title: "Smart Insight", message: assistantReply));
         } else {
-          _errorMessage = 'Received unexpected response format from the assistant.';
+          _errorMessage = 'Received unexpected response format (not a list) from the assistant.';
         }
       } else {
         print('Failed to load insights: ${response.statusCode} ${response.body}');
@@ -92,7 +159,7 @@ class _SmartAssistantState extends State<SmartAssistant> {
       }
     } catch (e) {
       print('Error fetching insights: $e');
-      _errorMessage = 'An error occurred: ${e.toString()}. Check connection or server.';
+      _errorMessage = 'An error occurred: ${e.toString()}. Check connection, server, or IP address in _chatApiUrl.';
     }
 
     setState(() {
@@ -140,7 +207,7 @@ class _SmartAssistantState extends State<SmartAssistant> {
                     ],
                   ),
                   child: const Icon(
-                    Icons.lightbulb_outline,
+                    Icons.insights, // Changed main icon for variety
                     color: Colors.white,
                     size: 24,
                   ),
@@ -176,17 +243,17 @@ class _SmartAssistantState extends State<SmartAssistant> {
             else
               ListView.separated(
                 shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(), // To use inside Column
+                physics: const NeverScrollableScrollPhysics(),
                 itemCount: _insights.length,
                 itemBuilder: (context, index) {
                   final insight = _insights[index];
                   return _buildAlertCard(
-                    icon: insight.icon,
-                    title: insight.title, // Could be "Smart Tip 1", "Smart Tip 2" etc.
+                    icon: insight.icon, // Uses icon from AiInsight
+                    title: insight.title,
                     message: insight.message,
-                    backgroundColor: const Color(0xFFE3F2FD), // Light blue background
-                    iconColor: const Color(0xFF1B5886), // Darker blue icon
-                    borderColor: const Color(0xFFBBDEFB), // Lighter blue border
+                    backgroundColor: insight.backgroundColor, // Uses color from AiInsight
+                    iconColor: insight.iconColor,           // Uses color from AiInsight
+                    borderColor: insight.borderColor,         // Uses color from AiInsight
                   );
                 },
                 separatorBuilder: (context, index) => const SizedBox(height: 12),
@@ -268,7 +335,7 @@ class _SmartAssistantState extends State<SmartAssistant> {
                   title,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: iconColor, // Use iconColor for title for consistency
+                    color: iconColor, // Use the dynamic iconColor for title
                     fontSize: 15,
                   ),
                 ),
@@ -276,7 +343,7 @@ class _SmartAssistantState extends State<SmartAssistant> {
                 Text(
                   message,
                   style: const TextStyle(
-                    color: Color(0xFF424242), // Slightly darker text for better readability
+                    color: Color(0xFF424242), // Keeping message text color consistent for readability
                     height: 1.4,
                     fontSize: 14,
                   ),

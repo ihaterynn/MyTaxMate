@@ -1,5 +1,5 @@
 import os
-from openai import OpenAI
+from openai import AsyncOpenAI 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,7 +7,8 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import uvicorn
 from dotenv import load_dotenv
-import json # Added for formatting expense data
+import json
+import traceback # For detailed error logging
 
 load_dotenv()
 
@@ -243,7 +244,6 @@ app.add_middleware(
 class ChatQuery(BaseModel):
     query: str
     expenses: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
-    # New field to indicate if the query is for smart assistant insights
     is_smart_assistant_query: Optional[bool] = False 
 
 @app.post("/chat")
@@ -252,7 +252,7 @@ async def chat_with_assistant_endpoint(chat_query: ChatQuery):
         print("Error: DASHSCOPE_API_KEY environment variable not set.")
         raise HTTPException(status_code=500, detail="API key not configured.")
 
-    client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
+    client = AsyncOpenAI(api_key=API_KEY, base_url=BASE_URL)
 
     base_context_for_prompt = MALAYSIAN_TAX_CONTEXT
     if not base_context_for_prompt.strip():
@@ -261,109 +261,109 @@ async def chat_with_assistant_endpoint(chat_query: ChatQuery):
 
     user_query = chat_query.query
     if not user_query:
-        raise HTTPException(status_code=400, detail="No query provided.")
+        if chat_query.is_smart_assistant_query and chat_query.expenses:
+            user_query = "Provide financial insights based on my expenses."
+        elif chat_query.is_smart_assistant_query and not chat_query.expenses:
+             user_query = "Provide general financial insights or tax tips for Malaysians."
+        else:
+            raise HTTPException(status_code=400, detail="No query provided.")
 
     expense_context_str = ""
     if chat_query.expenses:
         try:
-            expenses_json_str = json.dumps(chat_query.expenses, indent=2)
-            expense_context_str = f"\n\nHere is a summary of the user's recent expenses:\n{expenses_json_str}"
-            print(f"Including {len(chat_query.expenses)} expenses in the prompt for query: {user_query[:50]}...")
+            valid_expenses = []
+            for expense in chat_query.expenses:
+                if isinstance(expense, dict):
+                    valid_expenses.append(expense)
+                else:
+                    print(f"Warning: Invalid expense item skipped: {expense}")
+            
+            if valid_expenses:
+                expenses_json_str = json.dumps(valid_expenses, indent=2)
+                expense_context_str = f"\n\nHere is a summary of the user's recent expenses:\n{expenses_json_str}"
+                print(f"Including {len(valid_expenses)} expenses in the prompt for query: {user_query[:50]}...")
+            else:
+                expense_context_str = "\n\nNo valid expenses were provided by the user."
+                print("No valid expenses provided to include in the prompt.")
+        except TypeError as te:
+            print(f"Error serializing expenses to JSON: {te}. Expenses: {chat_query.expenses}")
+            expense_context_str = "\n\n(Could not format expense data for the prompt due to a serialization error.)"
         except Exception as e:
             print(f"Error formatting expenses: {e}")
             expense_context_str = "\n\n(Could not format expense data for the prompt due to an error.)"
+    elif chat_query.is_smart_assistant_query: # If smart assistant query but no expenses
+        expense_context_str = "\n\nNo specific expenses were provided. Offer general financial advice or tax tips."
 
-    # Adjust system prompt based on query type
+    system_prompt_content = ""
+    user_facing_content = ""
+
     if chat_query.is_smart_assistant_query:
         system_prompt_content = (
-            "You are an AI assistant providing concise financial insights based on Malaysian taxation context and user expenses. "
+            "You are an AI assistant providing concise financial insights based on Malaysian taxation context and user expenses (if any). "
             "Your goal is to offer 2-3 short, actionable, and distinct points. Each point should be a complete sentence. "
             "Format your entire response as a JSON list of strings, where each string is a separate insight. For example: [\"Insight 1 about expenses.\", \"Insight 2 about tax deduction.\"]. "
-            "Focus on potential savings, tax deductions, or spending patterns. Do not add any introductory or concluding text outside the JSON list."
+            "Focus on potential savings, tax deductions, or spending patterns. Do not greet or use conversational fillers. Only provide the JSON list. "
+            "If no expenses are provided, offer general Malaysian tax tips or financial advice suitable for a broad audience."
         )
-        # The user_query for smart assistant will be crafted in the frontend to ask for these points
-        # So, the user_query itself will already be something like: 
-        # "Based on my recent expenses, provide a JSON list of 2-3 concise financial insights..."
-        user_prompt_content = (
-            f"{base_context_for_prompt}"
-            f"{expense_context_str}"
-            f"\n\nUser's request: {user_query}"
-        )
-    else: # General chat query
-        system_prompt_content = (
-            "You are an AI assistant specializing ONLY in Malaysian taxation, based on the provided context. "
-            "If a question is not about Malaysian taxation or cannot be answered using the provided context, "
-            "politely state that you can only answer questions about Malaysian tax. "
-            "Do not attempt to answer unrelated questions (e.g., math problems, general knowledge). "
-            "Keep your tax-related responses concise and to the point."
-        )
-        user_prompt_content = (
-            f"{base_context_for_prompt}"
-            f"{expense_context_str}" # Expenses can still be relevant for general chat
-            f"\n\nBased on the comprehensive Malaysian taxation information and the user's expenses (if provided) above, please answer the following question: {user_query}"
-        )
+        # For smart assistant, the user_facing_content is primarily the expense data and a generic trigger phrase.
+        user_facing_content = f"Please provide insights based on the following expenses (if any): {expense_context_str if chat_query.expenses else 'No expenses provided.'}"
+    else:
+        system_prompt_content = base_context_for_prompt
+        user_facing_content = f"{expense_context_str}\n\nUser Query: {user_query}"
 
-    messages_payload = [
+    messages = [
         {"role": "system", "content": system_prompt_content},
-        {"role": "user", "content": user_prompt_content}
+        {"role": "user", "content": user_facing_content}
     ]
 
     try:
-        print(f"Sending request to Qwen model ('{MODEL_NAME}') for query type: {'Smart Assistant' if chat_query.is_smart_assistant_query else 'General Chat'}")
-        # print(f"Payload: {json.dumps(messages_payload, indent=2)}") # For debugging
+        print(f"Sending request to LLM. Smart assistant query: {chat_query.is_smart_assistant_query}. Model: {MODEL_NAME}")
+        print(f"Messages being sent: {json.dumps(messages, indent=2)}")
 
-        completion = client.chat.completions.create(
+        completion = await client.chat.completions.create(
             model=MODEL_NAME,
-            messages=messages_payload,
-            # For smart assistant, we expect a JSON list, so temperature can be lower for predictability
-            temperature=0.3 if chat_query.is_smart_assistant_query else 0.7, 
-            # Ensure max_tokens is sufficient for the JSON list or general chat response
-            max_tokens=500 if chat_query.is_smart_assistant_query else 1500 
+            messages=messages,
+            temperature=0.7, 
+            # max_tokens=300 # For concise insights, max_tokens can be lower
         )
+        
+        response_content = completion.choices[0].message.content.strip()
+        print(f"LLM Raw Response: {response_content}")
 
-        if completion.choices and completion.choices[0].message and completion.choices[0].message.content:
-            assistant_reply_content = completion.choices[0].message.content
-            print(f"Assistant reply: {assistant_reply_content[:200]}...")
-            
-            # For smart assistant, we expect a JSON list of strings
-            if chat_query.is_smart_assistant_query:
-                try:
-                    # Attempt to parse the reply as JSON. The AI should return a valid JSON string list.
-                    insights_list = json.loads(assistant_reply_content)
-                    if not isinstance(insights_list, list) or not all(isinstance(item, str) for item in insights_list):
-                        print("Warning: AI reply for smart assistant was not a valid JSON list of strings. Falling back to treating as single message.")
-                        # Fallback: return the raw string in the expected format if parsing fails to meet criteria
-                        return JSONResponse(content={"assistant_reply": [assistant_reply_content] if isinstance(assistant_reply_content, str) else "Could not generate insights."})
-                    return JSONResponse(content={"assistant_reply": insights_list}) # Return the list directly
-                except json.JSONDecodeError:
-                    print("Error: AI reply for smart assistant was not valid JSON. Returning as single message.")
-                    # Fallback: return the raw string in the expected format if JSON parsing fails
-                    return JSONResponse(content={"assistant_reply": [assistant_reply_content] if isinstance(assistant_reply_content, str) else "Could not parse insights."}) 
-            else:
-                # For general chat, return the string reply as before
-                return JSONResponse(content={"assistant_reply": assistant_reply_content})
+        if chat_query.is_smart_assistant_query:
+            try:
+                insights = json.loads(response_content)
+                if not isinstance(insights, list) or not all(isinstance(item, str) for item in insights):
+                    print(f"LLM response for smart assistant is not a list of strings: {response_content}")
+                    insights = ["Received non-standard insight format. Please try refreshing.", response_content]
+                return JSONResponse(content=insights)
+            except json.JSONDecodeError:
+                print(f"Failed to decode LLM response as JSON for smart assistant: {response_content}")
+                # Attempt to extract list-like content if model fails to produce perfect JSON array string
+                # This is a more robust fallback
+                if response_content.startswith('[') and response_content.endswith(']'):
+                    try:
+                        # Try to manually parse common errors like single quotes or unescaped quotes within strings
+                        # This is a simplified attempt; a more robust parser might be needed for complex cases
+                        cleaned_response = response_content.replace("'", "\"") # Replace single with double quotes
+                        # Further cleaning might be needed depending on common LLM output errors
+                        insights = json.loads(cleaned_response)
+                        if isinstance(insights, list) and all(isinstance(item, str) for item in insights):
+                            return JSONResponse(content=insights)
+                    except Exception as parse_err:
+                        print(f"Could not manually parse cleaned response: {parse_err}")
+                        pass # Fall through to default error
+                
+                return JSONResponse(content=["AI response was not valid JSON, and could not be auto-corrected. Raw: " + response_content])
         else:
-            print("Error: Model returned an empty or invalid response structure.")
-            finish_reason = "Unknown"
-            if completion.choices and hasattr(completion.choices[0], 'finish_details') and completion.choices[0].finish_details: # Newer SDK
-                 finish_reason = completion.choices[0].finish_details.get('reason', 'N/A') 
-            elif completion.choices and hasattr(completion.choices[0], 'finish_reason'): # Older SDK
-                 finish_reason = completion.choices[0].finish_reason
-            print(f"Finish reason: {finish_reason}")
-            # print(f"Full API Response: {completion}")
-            raise HTTPException(status_code=500, detail=f"Model returned an empty or invalid response. Finish reason: {finish_reason}")
+            return JSONResponse(content={"assistant_reply": response_content})
 
-    except HTTPException as e:
-        raise e
+    except HTTPException as http_exc: 
+        raise http_exc
     except Exception as e:
-        print(f"Error during API call to Qwen model: {e}")
-        # try:
-        #     problematic_payload_json = json.dumps(messages_payload, indent=2)
-        #     print(f"Problematic Payload:\n{problematic_payload_json}")
-        # except Exception as json_e:
-        #     print(f"Could not serialize problematic payload: {json_e}")
-        raise HTTPException(status_code=500, detail=f"An error occurred while communicating with the AI model: {str(e)}")
+        print(f"Error during LLM call or processing: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"An error occurred with the AI service: {str(e)}")
 
 if __name__ == "__main__":
-    print(f"Starting Uvicorn server. API Key Loaded: {'Yes' if API_KEY else 'No - Check .env'}")
     uvicorn.run(app, host="0.0.0.0", port=8000)
