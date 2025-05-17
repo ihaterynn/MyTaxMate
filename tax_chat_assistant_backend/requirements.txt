@@ -1,0 +1,5 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+openai # This should cover AsyncOpenAI as well
+pydantic
