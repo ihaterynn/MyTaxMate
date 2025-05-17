@@ -21,7 +21,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
   final _formKey = GlobalKey<FormState>();
   final _supabaseService = SupabaseService();
 
-  final String _receiptProcessingApiUrl = 'http://localhost:8001/process-receipt'; 
+  final String _receiptProcessingApiUrl = 'http://localhost/process-receipt'; 
   final _dateController = TextEditingController();
   final _merchantController = TextEditingController();
   final _categoryController = TextEditingController();

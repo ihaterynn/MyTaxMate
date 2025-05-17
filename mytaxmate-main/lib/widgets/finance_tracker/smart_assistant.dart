@@ -90,7 +90,7 @@ class _SmartAssistantState extends State<SmartAssistant> {
   bool _isLoading = false;
   String? _errorMessage;
 
-  final String _chatApiUrl = 'http://localhost:8000/chat';
+  final String _chatApiUrl = 'http://47.250.148.184:8002/chat';
 
   @override
   void initState() {
