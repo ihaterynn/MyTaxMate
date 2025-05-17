@@ -104,7 +104,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 50.0),
                     child: Image.asset(
                       // Use the path relative to the project root, like ../assets/images/mytaxmate-logo.png
-                      '../assets/images/mytaxmate-logo.png',
+                      'assets/images/mytaxmate-logo.png',
                       // Use BoxFit.contain to scale the image nicely within its available space
                       //fit: BoxFit.contain,
                       // You might want to add a specific height/width here if it's not constrained by a parent widget
