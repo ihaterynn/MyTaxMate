@@ -431,7 +431,6 @@ class _FinanceTrackerScreenState extends State<FinanceTrackerScreen> {
       },
       minWidth: 56.0,
       backgroundColor: Colors.white,
-      elevation: 0,
       selectedIconTheme: IconThemeData(
         color: Theme.of(context).colorScheme.primary,
       ),
