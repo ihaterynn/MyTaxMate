@@ -4,11 +4,13 @@ import '../../main.dart';
 class FinanceTrackerNavigationRail extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onDestinationSelected;
+  final VoidCallback onLogout;
 
   const FinanceTrackerNavigationRail({
     Key? key,
     required this.selectedIndex,
     required this.onDestinationSelected,
+    required this.onLogout,
   }) : super(key: key);
 
   @override
@@ -32,12 +34,6 @@ class FinanceTrackerNavigationRail extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 20.0),
         child: Column(
           children: [
-            Image.asset(
-              'assets/images/mytaxmate-logo.png',
-              height: 48,
-              width: 48,
-            ),
-            const SizedBox(height: 8),
             Container(
               height: 48,
               width: 48,
@@ -84,16 +80,18 @@ class FinanceTrackerNavigationRail extends StatelessWidget {
               children: [
                 IconButton(
                   icon: const Icon(Icons.notifications_none_outlined),
-                  onPressed: () {},
-                  color: Colors.grey[600],
-                ),
-                IconButton(
-                  icon: const Icon(Icons.settings_outlined),
-                  onPressed: () {},
+                  onPressed: () {
+                    onDestinationSelected(2); // Redirect to Tax News
+                  },
                   color: Colors.grey[600],
                 ),
                 const SizedBox(height: 10),
-                const CircleAvatar(radius: 18, child: Text("P")),
+                IconButton(
+                  icon: const Icon(Icons.logout),
+                  tooltip: 'Logout',
+                  onPressed: onLogout,
+                  color: Colors.grey[600],
+                ),
               ],
             ),
           ),

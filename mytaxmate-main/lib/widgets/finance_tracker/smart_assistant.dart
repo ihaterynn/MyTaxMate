@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
-import 'dart:convert'; // For jsonEncode and jsonDecode
-import 'package:http/http.dart' as http; // For making HTTP requests
-import '../../main.dart'; // For AppGradients
-import '../../services/expense_service.dart'; // Import your ExpenseService
+import '../../main.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../../services/expense_service.dart';
 
-enum InsightType {
-  recommendation,
-  warning,
-  info,
-}
+enum InsightType { recommendation, warning, info }
 
 class AiInsight {
   final String title;
@@ -23,10 +19,10 @@ class AiInsight {
     required this.title,
     required this.message,
     this.insightType = InsightType.info,
-  })  : icon = _getIconForType(insightType),
-        backgroundColor = _getBackgroundColorForType(insightType),
-        iconColor = _getIconColorForType(insightType),
-        borderColor = _getBorderColorForType(insightType);
+  }) : icon = _getIconForType(insightType),
+       backgroundColor = _getBackgroundColorForType(insightType),
+       iconColor = _getIconColorForType(insightType),
+       borderColor = _getBorderColorForType(insightType);
 
   static IconData _getIconForType(InsightType type) {
     switch (type) {
@@ -90,7 +86,7 @@ class _SmartAssistantState extends State<SmartAssistant> {
   bool _isLoading = false;
   String? _errorMessage;
 
-  final String _chatApiUrl = 'http://47.250.148.184:8002/chat';
+  final String _chatApiUrl = 'http://localhost:8000/chat';
 
   @override
   void initState() {
@@ -100,10 +96,16 @@ class _SmartAssistantState extends State<SmartAssistant> {
 
   InsightType _determineInsightType(String message) {
     final lowerMessage = message.toLowerCase();
-    if (lowerMessage.contains('warning') || lowerMessage.contains('due soon') || lowerMessage.contains('important') || lowerMessage.contains('alert')) {
+    if (lowerMessage.contains('warning') ||
+        lowerMessage.contains('due soon') ||
+        lowerMessage.contains('important') ||
+        lowerMessage.contains('alert')) {
       return InsightType.warning;
     }
-    if (lowerMessage.contains('recommend') || lowerMessage.contains('consider') || lowerMessage.contains('tip:') || lowerMessage.contains('suggestion')) {
+    if (lowerMessage.contains('recommend') ||
+        lowerMessage.contains('consider') ||
+        lowerMessage.contains('tip:') ||
+        lowerMessage.contains('suggestion')) {
       return InsightType.recommendation;
     }
     return InsightType.info;
@@ -117,49 +119,93 @@ class _SmartAssistantState extends State<SmartAssistant> {
     });
 
     try {
-      List<Map<String, dynamic>> expenses = await _expenseService.getRecentExpensesAsJsonEncodable();
+      final expensesList = await _expenseService.getRecentExpenses();
+      List<Map<String, dynamic>> expenses =
+          expensesList.map((e) => e.toJson()).toList();
 
       final requestBody = {
-        'query': 'Based on my recent expenses, provide a JSON list of 2-3 concise financial insights, spending patterns, and potential tax saving tips relevant to Malaysian context. Each item in the list should be a single, actionable sentence. Example: ["Your spending on X is high.", "Consider Y for tax relief."]',
+        'query':
+            'Based on my recent expenses, provide a JSON list of 2-3 concise financial insights, spending patterns, and potential tax saving tips relevant to Malaysian context. Each item in the list should be a single, actionable sentence. Example: ["Your spending on X is high.", "Consider Y for tax relief."]',
         'expenses': expenses,
         'is_smart_assistant_query': true,
       };
 
-      final response = await http.post(
-        Uri.parse(_chatApiUrl),
-        headers: {'Content-Type': 'application/json; charset=UTF-8'},
-        body: jsonEncode(requestBody),
-      ).timeout(const Duration(seconds: 45));
+      http.Response response;
+      try {
+        response = await http
+            .post(
+              Uri.parse(_chatApiUrl),
+              headers: {'Content-Type': 'application/json; charset=UTF-8'},
+              body: jsonEncode(requestBody),
+            )
+            .timeout(const Duration(seconds: 45));
+      } catch (e) {
+        _errorMessage =
+            'Could not connect to the Smart Assistant backend. Please check your connection or try again later.';
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
 
       if (response.statusCode == 200) {
-        final List<dynamic> decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+        try {
+          final List<dynamic> decodedData = jsonDecode(
+            utf8.decode(response.bodyBytes),
+          );
 
-        if (decodedData is List) {
-          _insights = decodedData.map<AiInsight>((item) {
-            if (item is String) {
-              final insightType = _determineInsightType(item);
-              String title = "Smart Tip";
-              if (insightType == InsightType.recommendation) title = "Recommendation";
-              if (insightType == InsightType.warning) title = "Important Alert";
+          if (decodedData is List) {
+            _insights =
+                decodedData.map<AiInsight>((item) {
+                  if (item is String) {
+                    final insightType = _determineInsightType(item);
+                    String title = "Smart Tip";
+                    if (insightType == InsightType.recommendation)
+                      title = "Recommendation";
+                    if (insightType == InsightType.warning)
+                      title = "Important Alert";
 
-              return AiInsight(title: title, message: item, insightType: insightType);
-            } else {
-              return AiInsight(title: "Insight", message: "Received unexpected insight format.", insightType: InsightType.info);
+                    return AiInsight(
+                      title: title,
+                      message: item,
+                      insightType: insightType,
+                    );
+                  } else {
+                    return AiInsight(
+                      title: "Insight",
+                      message: "Received unexpected insight format.",
+                      insightType: InsightType.info,
+                    );
+                  }
+                }).toList();
+            if (_insights.isEmpty) {
+              _insights.add(
+                AiInsight(
+                  title: "Smart Insight",
+                  message:
+                      "No specific insights generated this time. Check back later!",
+                  insightType: InsightType.info,
+                ),
+              );
             }
-          }).toList();
-          if (_insights.isEmpty) {
-            _insights.add(AiInsight(title: "Smart Insight", message: "No specific insights generated this time. Check back later!", insightType: InsightType.info));
+          } else {
+            _errorMessage =
+                'Received unexpected response format (not a list) from the assistant.';
           }
-        } else {
-          _errorMessage = 'Received unexpected response format (not a list) from the assistant.';
+        } catch (e) {
+          _errorMessage = 'Failed to parse response from Smart Assistant.';
         }
       } else {
-        print('Failed to load insights: ${response.statusCode} ${response.body}');
-        _errorMessage = 'Failed to load insights: ${response.statusCode}. Details: ${response.body.substring(0, (response.body.length > 100) ? 100 : response.body.length)}';
+        print(
+          'Failed to load insights: ${response.statusCode} ${response.body}',
+        );
+        _errorMessage =
+            'Failed to load insights: ${response.statusCode}. Details: ${response.body.substring(0, (response.body.length > 100) ? 100 : response.body.length)}';
       }
     } catch (e) {
       print('Error fetching insights: $e');
-      _errorMessage = 'An error occurred: ${e.toString()}. Check connection, server, or IP address in _chatApiUrl.';
+      _errorMessage =
+          'An error occurred: \\n${e.toString()}\\nCheck connection, server, or IP address in _chatApiUrl.';
     }
 
     setState(() {
@@ -213,9 +259,9 @@ class _SmartAssistantState extends State<SmartAssistant> {
                   ),
                 ),
                 const SizedBox(width: 16),
-                const Text(
+                Text(
                   "Smart Assistant",
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF202124),
@@ -225,17 +271,27 @@ class _SmartAssistantState extends State<SmartAssistant> {
             ),
             const SizedBox(height: 24),
             if (_isLoading)
-              const Center(child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 16.0),
-                child: CircularProgressIndicator(),
-              ))
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: CircularProgressIndicator(),
+                ),
+              )
             else if (_errorMessage != null)
-              _buildErrorCard(_errorMessage!)
+              _buildAlertCard(
+                icon: Icons.error_outline,
+                title: "Error",
+                message: _errorMessage!,
+                backgroundColor: Colors.red.withOpacity(0.05),
+                iconColor: Colors.red,
+                borderColor: Colors.red.withOpacity(0.2),
+              )
             else if (_insights.isEmpty)
               _buildAlertCard(
                 icon: Icons.info_outline,
                 title: "No Insights Yet",
-                message: "Tap 'Refresh' to get your personalized financial tips!",
+                message:
+                    "Tap 'Refresh' to get your personalized financial tips!",
                 backgroundColor: Colors.blueGrey.withOpacity(0.05),
                 iconColor: Colors.blueGrey,
                 borderColor: Colors.blueGrey.withOpacity(0.2),
@@ -251,20 +307,36 @@ class _SmartAssistantState extends State<SmartAssistant> {
                     icon: insight.icon, // Uses icon from AiInsight
                     title: insight.title,
                     message: insight.message,
-                    backgroundColor: insight.backgroundColor, // Uses color from AiInsight
-                    iconColor: insight.iconColor,           // Uses color from AiInsight
-                    borderColor: insight.borderColor,         // Uses color from AiInsight
+                    backgroundColor:
+                        insight.backgroundColor, // Uses color from AiInsight
+                    iconColor: insight.iconColor, // Uses color from AiInsight
+                    borderColor:
+                        insight.borderColor, // Uses color from AiInsight
                   );
                 },
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
+                separatorBuilder:
+                    (context, index) => const SizedBox(height: 12),
               ),
+
             const SizedBox(height: 16),
+            _buildAlertCard(
+              icon: Icons.lightbulb_outlined,
+              title: "Tax Saving Recommendation",
+              message:
+                  "Another placeholder insight. This could be a reminder or a suggestion for optimizing your finances.",
+              backgroundColor: const Color(0xFF003A6B).withOpacity(0.05),
+              iconColor: const Color(0xFF3776A1),
+              borderColor: const Color(0xFF003A6B).withOpacity(0.2),
+            ),
+            const SizedBox(height: 24),
             Center(
               child: TextButton.icon(
-                onPressed: _isLoading ? null : _fetchInsights,
-                icon: const Icon(Icons.refresh, size: 18),
+                onPressed: () {
+                  // TODO: Implement "See All Insights"
+                },
+                icon: const Icon(Icons.arrow_forward, size: 18),
                 label: const Text(
-                  'Refresh Insights',
+                  'See All Insights',
                   style: TextStyle(fontWeight: FontWeight.w500),
                 ),
                 style: TextButton.styleFrom(
@@ -281,17 +353,6 @@ class _SmartAssistantState extends State<SmartAssistant> {
     );
   }
 
-  Widget _buildErrorCard(String errorMessage) {
-    return _buildAlertCard(
-      icon: Icons.error_outline,
-      title: "Error",
-      message: errorMessage,
-      backgroundColor: Colors.red.withOpacity(0.05),
-      iconColor: Colors.red.shade700,
-      borderColor: Colors.red.withOpacity(0.2),
-    );
-  }
-
   Widget _buildAlertCard({
     required IconData icon,
     required String title,
@@ -301,7 +362,6 @@ class _SmartAssistantState extends State<SmartAssistant> {
     required Color borderColor,
   }) {
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         color: backgroundColor,
@@ -324,7 +384,7 @@ class _SmartAssistantState extends State<SmartAssistant> {
               color: iconColor.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: iconColor, size: 20),
+            child: Icon(icon, color: iconColor, size: 18),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -336,16 +396,17 @@ class _SmartAssistantState extends State<SmartAssistant> {
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: iconColor, // Use the dynamic iconColor for title
-                    fontSize: 15,
+                    height: 1.4,
+                    fontSize: 14,
                   ),
+                  overflow: TextOverflow.visible,
                 ),
                 const SizedBox(height: 4),
                 Text(
                   message,
                   style: const TextStyle(
-                    color: Color(0xFF424242), // Keeping message text color consistent for readability
-                    height: 1.4,
-                    fontSize: 14,
+                    color: Color(0xFF424242), // Message text color
+                    fontSize: 13,
                   ),
                 ),
               ],
