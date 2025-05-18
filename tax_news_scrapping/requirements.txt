@@ -1,0 +1,8 @@
+requests
+beautifulsoup4
+lxml
+supabase
+mysql-connector-python
+FLask
+gunicorn
+python-dotenv  # Good for local development, Function Compute uses its own env var system
