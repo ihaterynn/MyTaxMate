@@ -1,6 +1,5 @@
 import 'dart:io';
-import 'dart:typed_data';
-import 'dart:async'; 
+import 'dart:async'; // <-- Add this line
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -21,7 +20,8 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
   final _formKey = GlobalKey<FormState>();
   final _supabaseService = SupabaseService();
 
-  final String _receiptProcessingApiUrl = 'http://localhost:8001/process-receipt'; 
+ // TODO: Replace with your actual backend API URL
+  final String _receiptProcessingApiUrl = 'http://localhost:8001/process-receipt'; // Remove trailing slash
   final _dateController = TextEditingController();
   final _merchantController = TextEditingController();
   final _categoryController = TextEditingController();
@@ -49,7 +49,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
       context: context,
       initialDate:
           _dateController.text.isNotEmpty
-              ? (DateFormat('yyyy-MM-dd').tryParse(_dateController.text) ??
+              ? (DateFormat('yyyy-MM-dd').parse(_dateController.text) ??
                   DateTime.now())
               : DateTime.now(),
       firstDate: DateTime(2000),
@@ -149,8 +149,8 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Expense added successfully!')),
           );
-          _clearSelectedFile(); 
-          _formKey.currentState?.reset(); 
+          _clearSelectedFile(); // Clear selection after successful submit
+          _formKey.currentState?.reset(); // Reset form fields
           _dateController.clear();
           _merchantController.clear();
           _categoryController.clear();
@@ -175,7 +175,10 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
       }
     }
   }
+
+  // Renamed and updated function for AI generation
   Future<void> _aiGenerateAndFillForm() async {
+    // This function now uses the already selected file
     if (_selectedReceiptFileBytes == null && _selectedReceiptFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please upload a receipt file first.')),
@@ -187,13 +190,17 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
       _isAiProcessing = true;
     });
 
+    // Use _selectedReceiptFileBytes (web) or read from _selectedReceiptFile (non-web)
     Uint8List? imageBytes = _selectedReceiptFileBytes;
     if (!kIsWeb && _selectedReceiptFile != null) {
       imageBytes = await _selectedReceiptFile!.readAsBytes();
     }
     
+    // We already have _selectedReceiptFileName from the _pickReceiptFile method
+
     if (imageBytes != null && _selectedReceiptFileName != null) {
       try {
+        // Ensure the URL does NOT have a trailing slash to match the FastAPI endpoint
         final apiUrl = _receiptProcessingApiUrl.endsWith('/')
             ? _receiptProcessingApiUrl.substring(0, _receiptProcessingApiUrl.length - 1)
             : _receiptProcessingApiUrl;
@@ -204,11 +211,19 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
           imageBytes,
           filename: _selectedReceiptFileName!,
         ));
+        
+        // You can add other fields if your backend expects them, e.g.:
+        // request.fields['user_id'] = _supabaseService.client.auth.currentUser?.id ?? 'unknown';
 
         final client = http.Client();
         try {
-          final streamedResponse = await client.send(request).timeout(const Duration(seconds: 90), // Increased timeout to 60 seconds
+          // Send the request and follow redirects manually if needed
+          // Add a timeout to the request
+          final streamedResponse = await client.send(request).timeout(const Duration(seconds: 30), // Example: 30 seconds timeout
               onTimeout: () {
+            // This callback is executed if the timeout occurs.
+            // It should return a http.StreamedResponse or throw an error.
+            // For simplicity, we'll throw a TimeoutException which will be caught by the catch block.
             throw TimeoutException('The connection has timed out, Please try again!');
           });
           
@@ -219,72 +234,30 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
             
             // Assuming the backend returns data in a structure like:
             // {
-            //   'date': 'of issue**: 12/08/2013', // or 'YYYY-MM-DD' or other parseable format
+            //   'date': 'YYYY-MM-DD',
             //   'merchant': 'Merchant Name',
-            //   'amount': 123.45, // Can be num or string
+            //   'amount': 123.45,
             //   'category': 'Suggested Category',
             //   'is_deductible': true/false 
             // }
             // Adjust the keys below based on your actual backend response.
 
             setState(() {
-              // --- Date Processing ---
-              String rawDateString = extractedData['date']?.toString() ?? '';
-              // Remove common prefixes like "of issue**: "
-              String dateToParse = rawDateString.replaceFirst(RegExp(r'^of issue\*\*: \s*'), '').trim();
-              // You might want to add more general prefix removal if backend is inconsistent:
-              // dateToParse = dateToParse.replaceAll(RegExp(r'^[a-zA-Z\s\*\:]*'), '').trim();
-
-              try {
-                DateTime parsedDate;
-                if (dateToParse.contains('/')) {
-                  // Try "dd/MM/yyyy" (e.g., 12/08/2013)
-                  try {
-                    parsedDate = DateFormat('dd/MM/yyyy').parse(dateToParse);
-                  } catch (_) {
-                    // Fallback to "MM/dd/yyyy"
-                    parsedDate = DateFormat('MM/dd/yyyy').parse(dateToParse);
-                  }
-                  _dateController.text = DateFormat('yyyy-MM-dd').format(parsedDate);
-                } else if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(dateToParse)) {
-                  // If backend sends 'yyyy-MM-dd' directly
-                  _dateController.text = dateToParse;
-                } else {
-                  // If format is unknown or parsing fails, use the cleaned string.
-                  // Ideally, backend should send a consistent 'yyyy-MM-dd'.
-                  _dateController.text = dateToParse;
-                }
-              } catch (e) {
-                _dateController.text = dateToParse; // Fallback on any parsing error
-                print("AI Date parsing/formatting error: $e. Original: '$rawDateString', Cleaned: '$dateToParse'");
-              }
-
-              // --- Merchant ---
+              _dateController.text = extractedData['date']?.toString() ?? '';
               _merchantController.text = extractedData['merchant']?.toString() ?? '';
-              
-              // --- Amount ---
-              // The controller expects a string. Parsing to double happens on form submission.
-              var amountValue = extractedData['amount'];
-              if (amountValue is num) {
-                _amountController.text = amountValue.toStringAsFixed(2); // Ensure two decimal places for numbers
-              } else {
-                _amountController.text = amountValue?.toString() ?? ''; // Use as string if not num
-              }
-              
-              // --- Category ---
+              _amountController.text = (extractedData['amount'] as num?)?.toString() ?? '';
               _categoryController.text = extractedData['category']?.toString() ?? '';
-              // If _categoryController.text is new, the dropdown in build() method should handle adding it.
-              
-              // --- Tax Deductible Status ---
-              var isDeductibleValue = extractedData['is_deductible'];
-              if (isDeductibleValue is bool) {
-                _isDeductible = isDeductibleValue;
-              } else if (isDeductibleValue is String) {
-                // Handle if backend sends boolean as string "true" or "false"
-                _isDeductible = isDeductibleValue.toLowerCase() == 'true';
-              } else {
-                _isDeductible = false; // Default to false if not a boolean or recognized string
+              _isDeductible = (extractedData['is_deductible'] as bool?) ?? false;
+
+              // If the AI-suggested category is not in the standard list, add it for selection
+              if (_categoryController.text.isNotEmpty && !standardCategories.contains(_categoryController.text)) {
+                  // This logic might need to be adjusted based on how `standardCategories` is accessed here.
+                  // For simplicity, assuming `standardCategories` is accessible or managed in a way that allows this.
               }
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Fields auto-filled by AI. Please review.')),
+              );
             });
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -546,3 +519,4 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
     );
   }
 }
+  

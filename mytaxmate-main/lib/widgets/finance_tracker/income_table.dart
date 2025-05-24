@@ -27,7 +27,9 @@ class IncomeTable extends StatelessWidget {
     if (isLoading) {
       return Center(
         child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.secondary), // Use secondary color for income
+          valueColor: AlwaysStoppedAnimation<Color>(
+            Theme.of(context).colorScheme.secondary,
+          ), // Use secondary color for income
         ),
       );
     }
@@ -81,7 +83,8 @@ class IncomeTable extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: [
                     BoxShadow(
-                      color: Theme.of(context).colorScheme.secondary.withOpacity(0.2), // Use secondary color shadow
+                      color: Theme.of(context).colorScheme.secondary
+                          .withOpacity(0.2), // Use secondary color shadow
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
@@ -113,7 +116,9 @@ class IncomeTable extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Theme.of(context).colorScheme.secondary.withOpacity(0.3)), // Use secondary color border
+            border: Border.all(
+              color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+            ), // Use secondary color border
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.03),
@@ -129,13 +134,18 @@ class IncomeTable extends StatelessWidget {
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.secondary.withOpacity(0.05), // Use secondary color background
+                  color: Theme.of(context).colorScheme.secondary.withOpacity(
+                    0.05,
+                  ), // Use secondary color background
                   borderRadius: BorderRadius.circular(40),
                 ),
                 child: Icon(
                   Icons.account_balance_wallet_outlined, // Icon for income
                   size: 40,
-                  color: Theme.of(context).colorScheme.secondary, // Use secondary color
+                  color:
+                      Theme.of(
+                        context,
+                      ).colorScheme.secondary, // Use secondary color
                 ),
               ),
               const SizedBox(height: 16),
@@ -156,18 +166,25 @@ class IncomeTable extends StatelessWidget {
               const SizedBox(height: 16),
               Container(
                 decoration: BoxDecoration(
-                  gradient: AppGradients.greenGradient, // Use green gradient
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF43E97B), Color(0xFF38F9D7)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: [
                     BoxShadow(
-                      color: Theme.of(context).colorScheme.secondary.withOpacity(0.2), // Use secondary color shadow
+                      color: Theme.of(context).colorScheme.secondary
+                          .withOpacity(0.2), // Use secondary color shadow
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
                   ],
                 ),
                 child: ElevatedButton.icon(
-                  icon: const Icon(Icons.add_card_outlined), // Icon for adding income
+                  icon: const Icon(
+                    Icons.add_card_outlined,
+                  ), // Icon for adding income
                   label: const Text('Add First Income'), // Changed text
                   onPressed: () {
                     Navigator.push(
@@ -202,7 +219,9 @@ class IncomeTable extends StatelessWidget {
           return Card(
             margin: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 8.0),
             elevation: 1.5,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
             child: InkWell(
               onTap: () {
                 // Potentially navigate to a detailed view or edit screen
@@ -220,39 +239,65 @@ class IncomeTable extends StatelessWidget {
                       children: [
                         Text(
                           income.source,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.secondary, // Use secondary color
-                              ),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color:
+                                Theme.of(
+                                  context,
+                                ).colorScheme.secondary, // Use secondary color
+                          ),
                         ),
                         Text(
                           'RM ${income.amount.toStringAsFixed(2)}',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.secondary, // Use secondary color
-                              ),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color:
+                                Theme.of(
+                                  context,
+                                ).colorScheme.secondary, // Use secondary color
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 6),
                     Text(
                       'Type: ${income.type}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[700]),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: Colors.grey[700]),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Date: ${DateFormat('dd MMM yyyy').format(DateTime.parse(income.date))}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
                     ),
-                    if (income.documentStoragePath != null && income.documentStoragePath!.isNotEmpty)
+                    if (income.documentStoragePath != null &&
+                        income.documentStoragePath!.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 8.0),
                         child: Align(
                           alignment: Alignment.centerRight,
                           child: TextButton.icon(
-                            icon: Icon(Icons.description_outlined, size: 18, color: Theme.of(context).colorScheme.secondary), // Use secondary color
-                            label: Text('View Document', style: TextStyle(color: Theme.of(context).colorScheme.secondary)), // Use secondary color
-                            onPressed: () => onViewDocument(income.documentStoragePath!),
+                            icon: Icon(
+                              Icons.description_outlined,
+                              size: 18,
+                              color: Theme.of(context).colorScheme.secondary,
+                            ), // Use secondary color
+                            label: Text(
+                              'View Document',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.secondary,
+                              ),
+                            ), // Use secondary color
+                            onPressed:
+                                () =>
+                                    onViewDocument(income.documentStoragePath!),
                             style: TextButton.styleFrom(
                               padding: EdgeInsets.zero,
                               minimumSize: Size.zero,
@@ -284,7 +329,9 @@ class IncomeTable extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.all(8.0), // Added padding
             child: ConstrainedBox(
-              constraints: BoxConstraints(minWidth: constraints.maxWidth - 16), // Adjusted for padding
+              constraints: BoxConstraints(
+                minWidth: constraints.maxWidth - 16,
+              ), // Adjusted for padding
               child: DataTable(
                 columnSpacing: 16.0, // Changed from adaptive to fixed
                 headingRowHeight: 48.0, // Added
@@ -293,7 +340,10 @@ class IncomeTable extends StatelessWidget {
                 // headingRowColor: MaterialStateProperty.resolveWith<Color?>((Set<MaterialState> states) { // REMOVED
                 //   return Theme.of(context).colorScheme.secondaryContainer.withOpacity(0.3);
                 // }),
-                headingTextStyle: Theme.of(context).textTheme.titleSmall?.copyWith( // CHANGED
+                headingTextStyle: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(
+                  // CHANGED
                   fontWeight: FontWeight.w600,
                   color: Colors.black54,
                 ),
@@ -305,48 +355,81 @@ class IncomeTable extends StatelessWidget {
                   DataColumn(label: Text('Document')),
                   // Add more columns as needed, e.g., Actions
                 ],
-                rows: incomes.map((income) {
-                  return DataRow(
-                    cells: [
-                      DataCell(Text(DateFormat('dd MMM yyyy').format(DateTime.parse(income.date)))),
-                      DataCell(
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 14,
-                              backgroundColor: Theme.of(context).colorScheme.secondaryContainer.withOpacity(0.5),
-                              foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
-                              child: Text(
-                                income.source.isNotEmpty
-                                    ? income.source[0].toUpperCase()
-                                    : '?',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
+                rows:
+                    incomes.map((income) {
+                      return DataRow(
+                        cells: [
+                          DataCell(
+                            Text(
+                              DateFormat(
+                                'dd MMM yyyy',
+                              ).format(DateTime.parse(income.date)),
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                income.source,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                          ),
+                          DataCell(
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 14,
+                                  backgroundColor: Theme.of(context)
+                                      .colorScheme
+                                      .secondaryContainer
+                                      .withOpacity(0.5),
+                                  foregroundColor:
+                                      Theme.of(
+                                        context,
+                                      ).colorScheme.onSecondaryContainer,
+                                  child: Text(
+                                    income.source.isNotEmpty
+                                        ? income.source[0].toUpperCase()
+                                        : '?',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    income.source,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
-                      DataCell(_buildTypeChip(context, income.type)), // Changed to use chip
-                      DataCell(Text('RM ${income.amount.toStringAsFixed(2)}', textAlign: TextAlign.right)),
-                      DataCell(
-                        income.documentStoragePath != null && income.documentStoragePath!.isNotEmpty
-                            ? IconButton(
-                                icon: Icon(Icons.description_outlined, color: Theme.of(context).colorScheme.secondary), // Use secondary color
-                                onPressed: () => onViewDocument(income.documentStoragePath!),
-                                tooltip: 'View Document',
-                              )
-                            : const Text('N/A', style: TextStyle(color: Colors.grey)),
-                      ),
-                    ],
-                  );
-                }).toList(),
+                          ),
+                          DataCell(
+                            _buildTypeChip(context, income.type),
+                          ), // Changed to use chip
+                          DataCell(
+                            Text(
+                              'RM ${income.amount.toStringAsFixed(2)}',
+                              textAlign: TextAlign.right,
+                            ),
+                          ),
+                          DataCell(
+                            income.documentStoragePath != null &&
+                                    income.documentStoragePath!.isNotEmpty
+                                ? IconButton(
+                                  icon: Icon(
+                                    Icons.description_outlined,
+                                    color:
+                                        Theme.of(context).colorScheme.secondary,
+                                  ), // Use secondary color
+                                  onPressed:
+                                      () => onViewDocument(
+                                        income.documentStoragePath!,
+                                      ),
+                                  tooltip: 'View Document',
+                                )
+                                : const Text(
+                                  'N/A',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
               ),
             ),
           ),
@@ -364,9 +447,13 @@ Widget _buildTypeChip(BuildContext context, String type) {
     labelStyle: TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.w500,
-      color: Theme.of(context).colorScheme.onSecondaryContainer.withOpacity(0.8),
+      color: Theme.of(
+        context,
+      ).colorScheme.onSecondaryContainer.withOpacity(0.8),
     ),
-    backgroundColor: Theme.of(context).colorScheme.secondaryContainer.withOpacity(0.4),
+    backgroundColor: Theme.of(
+      context,
+    ).colorScheme.secondaryContainer.withOpacity(0.4),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     visualDensity: VisualDensity.compact,

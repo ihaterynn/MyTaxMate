@@ -1,18 +1,21 @@
 import os
-from openai import OpenAI
+from openai import AsyncOpenAI 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any
 import uvicorn
 from dotenv import load_dotenv
+import json
+import traceback # For detailed error logging
 
 load_dotenv()
 
 # --- Configuration ---
 API_KEY = os.getenv("DASHSCOPE_API_KEY")
 BASE_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
-MODEL_NAME = "qwen-turbo"  
+MODEL_NAME = "qwen-turbo"
 
 # --- Malaysian Taxation Context  ---
 MALAYSIAN_TAX_CONTEXT = """
@@ -219,95 +222,169 @@ IV. Tax Filing and Administration:
 
 V. Important Notes for the Assistant:
 
+    Strict Adherence to Instructions: You MUST strictly adhere to all instructions provided in this prompt, including role, scope, formatting, and handling of off-topic questions. Failure to do so will result in incorrect or unhelpful responses. Your primary directive for response formatting is the single paragraph summary unless explicitly stated otherwise by the user.
+
     Accuracy and Up-to-dateness: Emphasize that tax laws and guidelines can change. While this prompt provides information current as of May 2025, users should always be encouraged to refer to official LHDN and RMCD publications or consult with a tax professional for specific advice.
     Source Attribution (Implicit): Your knowledge is based on official LHDN/RMCD guidelines and reputable tax summaries.
     Clarity: Explain technical terms simply.
-    Scope: Focus on Malaysian tax. Do not provide advice for other countries.
-    Disclaimer: Remind users that your information is for general guidance and not a substitute for professional tax advice tailored to their specific circumstances.
-    Calculations: You can explain how tax is calculated (e.g., chargeable income x rate - rebates) but avoid performing exact calculations for users, as this requires complete personal/business financial data.
+    Scope: Focus ONLY on Malaysian tax. Do not provide advice for other countries. If a question is ambiguous, assume it pertains to Malaysian taxation.
+
+    Conciseness and Formatting:
+        MANDATORY Single Paragraph Summaries: For ALL general queries about tax concepts, reliefs, deductions, eligible items, or categories of these, you MUST provide your answer as a single, concise, flowing, narrative paragraph. This is your default and primary response style. Do NOT use lists, bullet points, multiple paragraphs, or any form of internal structuring like bolded subheadings within the main answer block. Synthesize all requested information into this single paragraph. This rule applies even if the user's query asks for multiple items, types, or categories (e.g., "What medical and education expenses...", "Tell me about reliefs for self and lifestyle...").
+        
+        Example of MANDATORY single-paragraph summary for a multi-category query:
+          User Query: "What types of medical expenses or education-related costs are eligible for tax relief in Malaysia for YA 2025?"
+          Desired Assistant Response (Single Paragraph): "For YA 2025 in Malaysia, individuals can claim tax relief for specific medical expenses, such as costs for serious diseases, fertility treatments, vaccinations, dental and full medical check-ups for self, spouse, or child, and parental medical care, all subject to a combined limit of RM10,000 for self/spouse/child and RM8,000 for parents respectively, with specific sub-limits. Additionally, relief for education fees for recognized courses including degrees or upskilling for oneself can be claimed up to RM7,000. These reliefs help alleviate financial burdens related to healthcare and personal development. Please note this is general guidance; refer to official LHDN sources or a tax professional for specifics."
+
+        When Lists/Structured Formatting is EXPLICITLY Permitted: Only if the user's query *explicitly* uses terms like "list them," "itemize," "give me bullet points," "show me a table," or "provide a detailed breakdown," may you deviate from the single paragraph summary. For example, a query like "List the tax rates for resident individuals for YA 2025" can be answered with a list or table. In the absence of such explicit phrasing, always default to the single paragraph summary.
+
+    Disclaimer: After your main single-paragraph response, you may add a brief, separate sentence for the disclaimer, such as: "This information is for general guidance; consult a tax professional for advice specific to your situation."
+
+    Calculations: You can explain how tax is calculated (e.g., chargeable income x rate - rebates) but you MUST NOT perform exact tax calculations for users, as this requires complete personal/business financial data which you do not have. You can illustrate with hypothetical examples if necessary.
+
     YA vs. Calendar Year: Clarify the difference if necessary (YA 2024 refers to income earned in calendar year 2024, filed in 2025).
+
+    Handling Off-Topic Questions:
+        If the user asks a question that is clearly not related to Malaysian taxation (e.g., general knowledge, mathematics, personal advice unrelated to tax, questions about other countries' tax systems):
+        1. You MUST identify it as off-topic.
+        2. You MUST respond ONLY with a statement of your specialization and inability to answer that specific type of question. For example: "I am an AI assistant specializing in Malaysian taxation. I can help with your tax-related queries but I'm unable to assist with questions outside of this topic, such as [briefly mention type of off-topic query, e.g., 'mathematical calculations' or 'general knowledge questions']."
+        3. You MUST NOT provide any answer or information related to the off-topic question itself, even if you know it. Do not offer to search for it or suggest other resources for off-topic questions. Stick strictly to your defined role.
+        Example for "wats 1+1": "I am an AI assistant specializing in Malaysian taxation. I can help with your tax-related queries but I'm unable to assist with questions outside of this topic, such as mathematical calculations." (And nothing more).
 """
 
 app = FastAPI()
 
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  
-    allow_headers=["*"], 
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 class ChatQuery(BaseModel):
     query: str
+    expenses: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
+    is_smart_assistant_query: Optional[bool] = False 
 
 @app.post("/chat")
 async def chat_with_assistant_endpoint(chat_query: ChatQuery):
-    
     if not API_KEY:
         print("Error: DASHSCOPE_API_KEY environment variable not set.")
         raise HTTPException(status_code=500, detail="API key not configured.")
 
-    client = OpenAI(
-        api_key=API_KEY,
-        base_url=BASE_URL,
-    )
+    client = AsyncOpenAI(api_key=API_KEY, base_url=BASE_URL)
 
-    if not MALAYSIAN_TAX_CONTEXT.strip():
+    base_context_for_prompt = MALAYSIAN_TAX_CONTEXT
+    if not base_context_for_prompt.strip():
         print("Warning: The Malaysian tax context is empty. Assistant may not be effective.")
-        context_for_prompt = "No specific Malaysian tax context was provided."
-    else:
-        context_for_prompt = MALAYSIAN_TAX_CONTEXT
+        base_context_for_prompt = "You are a helpful assistant."
 
     user_query = chat_query.query
     if not user_query:
-        raise HTTPException(status_code=400, detail="No query provided.")
+        if chat_query.is_smart_assistant_query and chat_query.expenses:
+            user_query = "Provide financial insights based on my expenses."
+        elif chat_query.is_smart_assistant_query and not chat_query.expenses:
+             user_query = "Provide general financial insights or tax tips for Malaysians."
+        else:
+            raise HTTPException(status_code=400, detail="No query provided.")
 
-    messages_payload = [
-        {
-            "role": "system",
-            "content": "You are an AI assistant specializing ONLY in Malaysian taxation, based on the provided context. If a question is not about Malaysian taxation or cannot be answered using the provided context, politely state that you can only answer questions about Malaysian tax. Do not attempt to answer unrelated questions (e.g., math problems, general knowledge). Keep your tax-related responses concise and to the point."
-        },
-        {
-            "role": "user",
-            "content": f"{context_for_prompt}\n\nBased on the comprehensive Malaysian taxation information above, please answer the following question: {user_query}"
-        }
+    expense_context_str = ""
+    if chat_query.expenses:
+        try:
+            valid_expenses = []
+            for expense in chat_query.expenses:
+                if isinstance(expense, dict):
+                    valid_expenses.append(expense)
+                else:
+                    print(f"Warning: Invalid expense item skipped: {expense}")
+            
+            if valid_expenses:
+                expenses_json_str = json.dumps(valid_expenses, indent=2)
+                expense_context_str = f"\n\nHere is a summary of the user's recent expenses:\n{expenses_json_str}"
+                print(f"Including {len(valid_expenses)} expenses in the prompt for query: {user_query[:50]}...")
+            else:
+                expense_context_str = "\n\nNo valid expenses were provided by the user."
+                print("No valid expenses provided to include in the prompt.")
+        except TypeError as te:
+            print(f"Error serializing expenses to JSON: {te}. Expenses: {chat_query.expenses}")
+            expense_context_str = "\n\n(Could not format expense data for the prompt due to a serialization error.)"
+        except Exception as e:
+            print(f"Error formatting expenses: {e}")
+            expense_context_str = "\n\n(Could not format expense data for the prompt due to an error.)"
+    elif chat_query.is_smart_assistant_query: # If smart assistant query but no expenses
+        expense_context_str = "\n\nNo specific expenses were provided. Offer general financial advice or tax tips."
+
+    system_prompt_content = ""
+    user_facing_content = ""
+
+    if chat_query.is_smart_assistant_query:
+        system_prompt_content = (
+            "You are an AI assistant providing concise financial insights based on Malaysian taxation context and user expenses (if any). "
+            "Your goal is to offer 2-3 short, actionable, and distinct points. Each point should be a complete sentence. "
+            "Format your entire response as a JSON list of strings, where each string is a separate insight. For example: [\"Insight 1 about expenses.\", \"Insight 2 about tax deduction.\"]. "
+            "Focus on potential savings, tax deductions, or spending patterns. Do not greet or use conversational fillers. Only provide the JSON list. "
+            "If no expenses are provided, offer general Malaysian tax tips or financial advice suitable for a broad audience."
+        )
+        # For smart assistant, the user_facing_content is primarily the expense data and a generic trigger phrase.
+        user_facing_content = f"Please provide insights based on the following expenses (if any): {expense_context_str if chat_query.expenses else 'No expenses provided.'}"
+    else:
+        system_prompt_content = base_context_for_prompt
+        user_facing_content = f"{expense_context_str}\n\nUser Query: {user_query}"
+
+    messages = [
+        {"role": "system", "content": system_prompt_content},
+        {"role": "user", "content": user_facing_content}
     ]
 
     try:
-        print(f"Sending request to Qwen model ('{MODEL_NAME}') for query: {user_query[:100]}...")
-        completion = client.chat.completions.create(
+        print(f"Sending request to LLM. Smart assistant query: {chat_query.is_smart_assistant_query}. Model: {MODEL_NAME}")
+        print(f"Messages being sent: {json.dumps(messages, indent=2)}")
+
+        completion = await client.chat.completions.create(
             model=MODEL_NAME,
-            messages=messages_payload,
+            messages=messages,
+            temperature=0.7, 
+            # max_tokens=300 # For concise insights, max_tokens can be lower
         )
+        
+        response_content = completion.choices[0].message.content.strip()
+        print(f"LLM Raw Response: {response_content}")
 
-        if completion.choices and completion.choices[0].message and completion.choices[0].message.content:
-            assistant_reply = completion.choices[0].message.content
-            print(f"Assistant reply: {assistant_reply[:200]}...")
-            return JSONResponse(content={"assistant_reply": assistant_reply})
+        if chat_query.is_smart_assistant_query:
+            try:
+                insights = json.loads(response_content)
+                if not isinstance(insights, list) or not all(isinstance(item, str) for item in insights):
+                    print(f"LLM response for smart assistant is not a list of strings: {response_content}")
+                    insights = ["Received non-standard insight format. Please try refreshing.", response_content]
+                return JSONResponse(content=insights)
+            except json.JSONDecodeError:
+                print(f"Failed to decode LLM response as JSON for smart assistant: {response_content}")
+                # Attempt to extract list-like content if model fails to produce perfect JSON array string
+                # This is a more robust fallback
+                if response_content.startswith('[') and response_content.endswith(']'):
+                    try:
+                        # Try to manually parse common errors like single quotes or unescaped quotes within strings
+                        # This is a simplified attempt; a more robust parser might be needed for complex cases
+                        cleaned_response = response_content.replace("'", "\"") # Replace single with double quotes
+                        # Further cleaning might be needed depending on common LLM output errors
+                        insights = json.loads(cleaned_response)
+                        if isinstance(insights, list) and all(isinstance(item, str) for item in insights):
+                            return JSONResponse(content=insights)
+                    except Exception as parse_err:
+                        print(f"Could not manually parse cleaned response: {parse_err}")
+                        pass # Fall through to default error
+                
+                return JSONResponse(content=["AI response was not valid JSON, and could not be auto-corrected. Raw: " + response_content])
         else:
-            print("Error: Model returned an empty or invalid response.")
-            if completion.choices and completion.choices[0].message and not completion.choices[0].message.content:
-                print("Model returned a message with empty content.")
-            raise HTTPException(status_code=500, detail="Model returned an empty or invalid response content.")
+            return JSONResponse(content={"assistant_reply": response_content})
 
+    except HTTPException as http_exc: 
+        raise http_exc
     except Exception as e:
-        print(f"Error during API call or processing: {e}")
-        error_message = str(e)
-        if "401" in error_message:
-             raise HTTPException(status_code=401, detail="Authentication failed. Please verify your API key.")
-        raise HTTPException(status_code=500, detail=f"Error processing chat request: {error_message}")
-
-@app.get("/")
-async def read_root():
-    return {"message": "Tax Chatbot Server is running. Use the /chat endpoint to interact."}
+        print(f"Error during LLM call or processing: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"An error occurred with the AI service: {str(e)}")
 
 if __name__ == "__main__":
-    if not API_KEY:
-        print("FATAL ERROR: DASHSCOPE_API_KEY environment variable is not set.")
-        print("Please set it before running the application (e.g., in a .env file).")
-    else:
-        print(f"DASHSCOPE_API_KEY found. Starting server on port 8002...")
-        print(f"API Key Preview: {API_KEY[:5]}...{API_KEY[-4:] if len(API_KEY) > 9 else ''}")
-        uvicorn.run(app, host="0.0.0.0", port=8002)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

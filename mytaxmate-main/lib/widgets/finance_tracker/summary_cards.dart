@@ -1,48 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../main.dart';
+import '../../screens/income_entry_screen.dart';
 import '../../screens/placeholder_screen.dart';
 import '../../screens/upload_options_screen.dart';
-import '../../screens/income_entry_screen.dart';
 import '../../models/expense.dart';
-import '../../models/income.dart'; // Add this import
+import '../../models/income.dart';
 
 class SummaryCards extends StatelessWidget {
   final List<Expense> expenses;
-  final List<Income> incomes; // Add incomes list
-  final bool isLoadingExpenses;
-  final bool isLoadingIncomes;
-  final String? errorExpenses;
-  final String? errorIncomes;
-  final Function() onReloadExpenses;
-  final Function() onReloadIncomes; // Add callback for reloading incomes
+  final List<Income> incomes;
+  final bool isLoading;
+  final String? error;
+  final VoidCallback onReload;
 
   const SummaryCards({
     Key? key,
     required this.expenses,
-    required this.incomes, // Add to constructor
-    required this.isLoadingExpenses,
-    required this.isLoadingIncomes,
-    this.errorExpenses,
-    this.errorIncomes,
-    required this.onReloadExpenses,
-    required this.onReloadIncomes, // Add to constructor
+    required this.incomes,
+    required this.isLoading,
+    this.error,
+    required this.onReload,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    // Handle the case where incomes might be null
+    final List<Income> safeIncomes = incomes ?? [];
+
     return LayoutBuilder(
       builder: (context, constraints) {
         bool useColumnLayout = constraints.maxWidth < 700;
+        final summaryCards = _buildSummaryCardsList(useColumnLayout, context);
+
         return useColumnLayout
-            ? Column(children: _buildSummaryCardsList(useColumnLayout, context))
+            ? Column(children: summaryCards)
             : Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children:
-                  _buildSummaryCardsList(
-                    useColumnLayout,
-                    context,
-                  ).map((card) => Expanded(child: card)).toList(),
+                  summaryCards.map((card) => Expanded(child: card)).toList(),
             );
       },
     );
@@ -54,35 +50,26 @@ class SummaryCards extends StatelessWidget {
   ) {
     // Calculate total expenses for the current month
     double currentMonthExpenses = 0.0;
-    double currentMonthIncome = 0.0; // Variable for current month income
     final now = DateTime.now();
     final currentMonth = now.month;
     final currentYear = now.year;
 
-    if (!isLoadingExpenses && errorExpenses == null) {
+    if (!isLoading && error == null) {
       for (var expense in expenses) {
-        try {
-          final expenseDate = DateTime.parse(expense.date);
-          if (expenseDate.month == currentMonth &&
-              expenseDate.year == currentYear) {
-            currentMonthExpenses += expense.amount;
-          }
-        } catch (e) {
-          print('Error parsing expense date: ${expense.date}');
+        if (DateTime.parse(expense.date).month == currentMonth &&
+            DateTime.parse(expense.date).year == currentYear) {
+          currentMonthExpenses += expense.amount;
         }
       }
     }
 
-    if (!isLoadingIncomes && errorIncomes == null) {
+    double currentMonthIncomes = 0.0;
+    if (!isLoading && error == null) {
       for (var income in incomes) {
-        try {
-          final incomeDate = DateTime.parse(income.date);
-          if (incomeDate.month == currentMonth &&
-              incomeDate.year == currentYear) {
-            currentMonthIncome += income.amount;
-          }
-        } catch (e) {
-          print('Error parsing income date: ${income.date}');
+        if (income.date != null &&
+            DateTime.parse(income.date).month == currentMonth &&
+            DateTime.parse(income.date).year == currentYear) {
+          currentMonthIncomes += income.amount;
         }
       }
     }
@@ -90,16 +77,17 @@ class SummaryCards extends StatelessWidget {
     final cardData = [
       {
         'title': 'Income',
-        'amount': 'RM ${currentMonthIncome.toStringAsFixed(2)}', // Display current month income
+        'amount':
+            'RM ${currentMonthIncomes.toStringAsFixed(2)}', // Placeholder for now
         'icon': Icons.account_balance_wallet_outlined,
-        'color': const Color(0xFF34A853),
+        'color': const Color(0xFF34A853), // Using green from our palette
         'progress': 0.0,
-        'subtitle': 'For ${DateFormat.MMMM().format(now)}', // Subtitle for current month
+        'subtitle': 'For ${DateFormat.MMMM().format(now)}',
         'gradient': LinearGradient(
           colors: [Colors.white, const Color(0xFF34A853).withOpacity(0.05)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          ) // Use AppGradients
+        ),
       },
       {
         'title': 'Monthly Expenses',
@@ -115,8 +103,8 @@ class SummaryCards extends StatelessWidget {
         ),
       },
       {
-        'title': 'Deductions',
-        'amount': 'RM 0.00', // Placeholder for now
+        'title': 'Tax Deductions',
+        'amount': 'RM 346.34', // Placeholder for now
         'icon': Icons.savings_outlined,
         'color': const Color(0xFF5293B8), // Blue from our palette
         'progress': 0.0,
@@ -233,9 +221,9 @@ class SummaryCards extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const ExpenseEntryScreen()),
-          ).then((_) => onReloadExpenses()); // Use onReloadExpenses
+          ).then((_) => onReload()); // Reload expenses after returning
         },
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12), // Match Card's shape
         child: cardContent,
       );
     } else if (title == 'Income') {
@@ -243,11 +231,8 @@ class SummaryCards extends StatelessWidget {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder:
-                  (context) => const IncomeEntryScreen(),
-            ),
-          ).then((_) => onReloadIncomes()); // Use onReloadIncomes and reload after navigation
+            MaterialPageRoute(builder: (context) => const IncomeEntryScreen()),
+          ).then((_) => onReload()); // Reload expenses after returning
         },
         borderRadius: BorderRadius.circular(12),
         child: cardContent,
