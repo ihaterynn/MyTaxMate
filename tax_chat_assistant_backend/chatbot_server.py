@@ -387,4 +387,4 @@ async def chat_with_assistant_endpoint(chat_query: ChatQuery):
         raise HTTPException(status_code=500, detail=f"An error occurred with the AI service: {str(e)}")
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8003)
