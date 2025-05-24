@@ -1,5 +1,0 @@
-fastapi
-uvicorn[standard] # [standard] includes common extras like websockets and http tools
-python-dotenv
-openai
-python-multipart # For File/UploadFile handling in FastAPI
