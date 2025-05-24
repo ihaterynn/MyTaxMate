@@ -327,4 +327,4 @@ if __name__ == "__main__":
     print(f"PaddleOCR Engine: {'Initialized' if ocr_engine else 'Failed to initialize'}")
     print("--------------------------------\n")
 
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="0.0.0.0", port=8002)

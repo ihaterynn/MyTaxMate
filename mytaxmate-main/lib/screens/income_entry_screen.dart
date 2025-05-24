@@ -120,7 +120,7 @@ class _IncomeEntryScreenState extends State<IncomeEntryScreen> {
     if (documentBytes != null && _selectedDocumentFileName != null) {
       try {
         // Ensure this URL matches your new income processing backend
-        const String apiUrl = 'http://localhost:8003/process-income-document'; 
+        const String apiUrl = 'http://localhost:8004/process-income-document'; 
         var request = http.MultipartRequest('POST', Uri.parse(apiUrl));
         request.files.add(http.MultipartFile.fromBytes(
           'file',
