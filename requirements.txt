@@ -1,0 +1,18 @@
+requests
+beautifulsoup4
+lxml
+supabase
+mysql-connector-python
+FLask
+gunicorn
+python-dotenv  
+fastapi
+uvicorn[standard]
+openai 
+pydantic
+python-multipart # For File/UploadFile handling in FastAPI
+paddleocr
+huggingface_hub
+paddlepaddle
+numpy
+opencv-python
