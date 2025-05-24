@@ -41,6 +41,11 @@ dependencies:
   camera_windows: ^0.2.6+2
   url_launcher: ^6.3.0
   http: ^1.2.0 # Or the latest version
+  fl_chart: ^0.68.0 # Added
+  syncfusion_flutter_pdf: ^26.1.35 # Added
+  open_file: ^3.3.2 # Added
+  pdf: ^3.10.8 # Added
+  printing: ^5.12.0 # Added
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

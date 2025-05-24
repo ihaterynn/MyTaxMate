@@ -86,7 +86,7 @@ class _SmartAssistantState extends State<SmartAssistant> {
   bool _isLoading = false;
   String? _errorMessage;
 
-  final String _chatApiUrl = 'http://localhost:8000/chat';
+  final String _chatApiUrl = 'http://localhost:8003/chat';
 
   @override
   void initState() {
@@ -316,37 +316,7 @@ class _SmartAssistantState extends State<SmartAssistant> {
                 },
                 separatorBuilder:
                     (context, index) => const SizedBox(height: 12),
-              ),
-
-            const SizedBox(height: 16),
-            _buildAlertCard(
-              icon: Icons.lightbulb_outlined,
-              title: "Tax Saving Recommendation",
-              message:
-                  "Another placeholder insight. This could be a reminder or a suggestion for optimizing your finances.",
-              backgroundColor: const Color(0xFF003A6B).withOpacity(0.05),
-              iconColor: const Color(0xFF3776A1),
-              borderColor: const Color(0xFF003A6B).withOpacity(0.2),
-            ),
-            const SizedBox(height: 24),
-            Center(
-              child: TextButton.icon(
-                onPressed: () {
-                  // TODO: Implement "See All Insights"
-                },
-                icon: const Icon(Icons.arrow_forward, size: 18),
-                label: const Text(
-                  'See All Insights',
-                  style: TextStyle(fontWeight: FontWeight.w500),
-                ),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                ),
-              ),
-            ),
+              ),       
           ],
         ),
       ),

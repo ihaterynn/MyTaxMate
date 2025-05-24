@@ -11,7 +11,10 @@ import mimetypes
 import json 
 from datetime import datetime 
 
-load_dotenv()
+
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+dotenv_path = os.path.join(project_root, '.env')
+load_dotenv(dotenv_path=dotenv_path)
 
 # --- Configuration ---
 API_KEY = os.getenv("DASHSCOPE_API_KEY")
@@ -207,4 +210,4 @@ if __name__ == "__main__":
     print(f"MODEL_NAME_TEXT (Text Structuring): {MODEL_NAME_TEXT}")
     print("--------------------------------\n")
 
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="0.0.0.0", port=8002)

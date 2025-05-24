@@ -13,8 +13,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the current directory contents into the container at /app
 COPY . .
 
-# Make port 8000 available (as per your chatbot_server.py)
-EXPOSE 8000
+# Make port 8003 available (as per your chatbot_server.py)
+EXPOSE 8003
 
 # Define environment variable for the API key (will be set at runtime)
 ENV DASHSCOPE_API_KEY="your_api_key_here"
@@ -22,4 +22,4 @@ ENV DASHSCOPE_API_KEY="your_api_key_here"
 
 # Run chatbot_server.py when the container launches
 # Assuming your FastAPI app instance is named 'app' in chatbot_server.py
-CMD ["uvicorn", "chatbot_server:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "chatbot_server:app", "--host", "0.0.0.0", "--port", "8003"]

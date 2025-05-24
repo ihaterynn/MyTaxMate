@@ -21,7 +21,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
   final _supabaseService = SupabaseService();
 
  // TODO: Replace with your actual backend API URL
-  final String _receiptProcessingApiUrl = 'http://localhost:8001/process-receipt'; // Remove trailing slash
+  final String _receiptProcessingApiUrl = 'http://localhost:8002/process-receipt'; // Remove trailing slash
   final _dateController = TextEditingController();
   final _merchantController = TextEditingController();
   final _categoryController = TextEditingController();
