@@ -16,3 +16,11 @@ huggingface_hub
 paddlepaddle
 numpy
 opencv-python
+
+#  RAG/KAG system
+PyPDF2
+langchain
+langchain-community # HuggingFaceEmbeddings and FAISS
+sentence-transformers
+faiss-cpu
+tiktoken
