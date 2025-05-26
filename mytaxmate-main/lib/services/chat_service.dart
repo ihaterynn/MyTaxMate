@@ -26,12 +26,27 @@ class ChatService {
   }
 
   Future<void> _generateAssistantResponse(String userMessage) async {
-    // In a real app, this would call an actual backend service
+    // Prepare the history in the format expected by the backend
+    // The backend expects a list of {'role': 'user'/'assistant', 'content': '...'}
+    // Our ChatMessage model has 'text' and 'isUser'
+    List<Map<String, String>> historyPayload = _chatHistory
+        .where((msg) => msg.text != userMessage) // Exclude the current message if it's already added
+        .map((msg) => {
+              'role': msg.isUser ? 'user' : 'assistant',
+              'content': msg.text,
+            })
+        .toList();
+
     try {
       final response = await http.post(
         Uri.parse(_backendUrl),
         headers: {'Content-Type': 'application/json; charset=UTF-8'},
-        body: jsonEncode({'query': userMessage}),
+        body: jsonEncode({
+          'message': userMessage, // Changed 'query' to 'message'
+          'history': historyPayload, // Added history
+          'expenses': [], // Added expenses (empty for now)
+          'is_smart_assistant_query': false, // Added flag (false for now)
+        }),
       );
 
       if (response.statusCode == 200) {
