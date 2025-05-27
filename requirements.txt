@@ -16,7 +16,7 @@ huggingface_hub
 paddlepaddle
 numpy
 opencv-python
-torch
+torch==2.1.0+cpu
 torchvision
 torchaudio
 
