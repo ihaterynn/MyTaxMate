@@ -16,6 +16,9 @@ huggingface_hub
 paddlepaddle
 numpy
 opencv-python
+torch
+torchvision
+torchaudio
 
 #  RAG/KAG system
 PyPDF2
